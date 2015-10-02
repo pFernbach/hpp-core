@@ -80,8 +80,8 @@ namespace hpp {
         return path;
       }
     protected:
-      /// Constructor with robot
-      /// Weighed distance is created from robot
+      /// Constructor with problem
+      /// Weighed distance is created from problem
       SteeringMethodStraight (const ProblemPtr_t& problem) :
 	SteeringMethod (problem), weak_ ()
       {

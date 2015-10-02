@@ -18,6 +18,7 @@
 
 #include <hpp/util/debug.hh>
 #include <hpp/model/collision-object.hh>
+#include <hpp/model/configuration.hh>
 #include <hpp/constraints/differentiable-function.hh>
 #include <hpp/core/problem-solver.hh>
 #include <hpp/core/diffusing-planner.hh>
@@ -32,15 +33,20 @@
 #include <hpp/core/path-optimization/gradient-based.hh>
 #include <hpp/core/path-optimization/partial-shortcut.hh>
 #include <hpp/core/path-optimization/config-optimization.hh>
+#include <hpp/core/prune.hh>
 #include <hpp/core/random-shortcut.hh>
 #include <hpp/core/roadmap.hh>
 #include <hpp/core/steering-method-straight.hh>
 #include <hpp/core/visibility-prm-planner.hh>
 #include <hpp/core/weighed-distance.hh>
 #include <hpp/core/basic-configuration-shooter.hh>
+#include <hpp/core/parabola-planner.hh>
+#include <hpp/core/parabola/parabola-path.hh>
+#include <hpp/core/contact-configuration-shooter.hh>
 
 namespace hpp {
   namespace core {
+  using model::displayConfig;
     // Struct that constructs an empty shared pointer to PathOptimizer.
     struct NoneOptimizer
     {
@@ -76,7 +82,8 @@ namespace hpp {
       constraints_ (), robot_ (), problem_ (), pathPlanner_ (),
       roadmap_ (), paths_ (),
       pathProjectorType_ ("None"), pathProjectorTolerance_ (0.2),
-      pathPlannerType_ ("DiffusingPlanner"),
+      //pathPlannerType_ ("DiffusingPlanner"),
+      pathPlannerType_ ("ParabolaPlanner"),
       initConf_ (), goalConfigurations_ (),
       configurationShooterType_ ("BasicConfigurationShooter"),
       steeringMethodType_ ("SteeringMethodStraight"),
@@ -88,6 +95,7 @@ namespace hpp {
       distanceBetweenObjects_ ()
     {
       add <PathPlannerBuilder_t> ("DiffusingPlanner",     DiffusingPlanner::createWithRoadmap);
+add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRoadmap);
       add <PathPlannerBuilder_t> ("VisibilityPrmPlanner", VisibilityPrmPlanner::createWithRoadmap);
 
       add <ConfigurationShooterBuilder_t> ("BasicConfigurationShooter", BasicConfigurationShooter::create);
@@ -98,6 +106,7 @@ namespace hpp {
             ));
 
       // Store path optimization methods in map.
+      add <PathOptimizerBuilder_t> ("Prune",     Prune::create);
       add <PathOptimizerBuilder_t> ("RandomShortcut",     RandomShortcut::create);
       add <PathOptimizerBuilder_t> ("GradientBased",      pathOptimization::GradientBased::create);
       add <PathOptimizerBuilder_t> ("PartialShortcut",    pathOptimization::PartialShortcut::create);
@@ -422,7 +431,9 @@ namespace hpp {
 
       PathVectorPtr_t path = pathPlanner_->solve ();
       paths_.push_back (path);
-      optimizePath (path);
+      //optimizePath (path);
+      PathVectorPtr_t orient_path = createOrientations (path);
+      paths_.push_back (orient_path);
     }
 
     bool ProblemSolver::directPath (ConfigurationIn_t start,
@@ -555,6 +566,59 @@ namespace hpp {
     const ObjectVector_t& ProblemSolver::distanceObstacles () const
     {
       return distanceObstacles_;
+    }
+    
+    PathVectorPtr_t ProblemSolver::createOrientations (PathVectorPtr_t path)
+    {
+      PathVectorPtr_t orient_path = PathVector::create (robot_->configSize (),
+							robot_->numberDof ());
+      const std::size_t num_subpaths  = (*path).numberPaths ();
+      std::vector <Configuration_t> waypoints;// (num_subpaths + 1);
+      Configuration_t config;
+      const size_type index = robot_->configSize ()
+	- robot_->extraConfigSpace ().dimension ();
+      PathPtr_t tmpPath;
+      
+      // loop on path to gather waypoints
+      bool success;
+      for (std::size_t i = 0; i < num_subpaths; i++) {
+	tmpPath = (*path).pathAtRank (i);
+	config = (*tmpPath) (0, success);
+	waypoints.push_back (config);
+	hppDout (info, "config: " << displayConfig (config));
+	hppDout (info, "wp(i): " << displayConfig (waypoints [i]));
+      }
+      // last config
+      tmpPath = (*path).pathAtRank (num_subpaths - 1);
+      waypoints.push_back ((*tmpPath) (tmpPath->length (), success));
+      hppDout (info, "wp(i): " << displayConfig (waypoints [num_subpaths]));
+
+      // update theta values
+      for (std::size_t i = 0; i < waypoints.size () - 1; i++) {
+	// theta_(i,i+1)
+	value_type theta_i = atan2 (waypoints [i+1][1]-waypoints [i][1],
+				    waypoints [i+1][0]-waypoints [i][0]);
+	hppDout (info, "theta_i: " << theta_i);
+	waypoints [i][index + 3] = theta_i;
+      }
+      
+      // update waypoints orientations
+      ContactConfigurationShooterPtr_t ccs
+	(ContactConfigurationShooter::create (robot_, *problem_));
+      for (std::size_t i = 0; i < waypoints.size (); i++) {
+	waypoints [i] = ccs->setOrientation (waypoints [i]);
+      }
+
+      // loop to construct new path vector with parabPath constructor
+      for (std::size_t i = 0; i < num_subpaths; i++) {
+	vector_t coefs = (*path).pathAtRank (i)->coefficients ();
+	value_type length = (*path).pathAtRank (i)->length ();
+	orient_path->appendPath (ParabolaPath::create (robot_,
+						       waypoints [i],
+						       waypoints [i+1],
+						       length, coefs));
+      }
+      return orient_path;
     }
 
   } //   namespace core

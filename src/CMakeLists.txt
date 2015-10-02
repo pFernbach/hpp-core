@@ -56,6 +56,7 @@ SET(${LIBRARY_NAME}_SOURCES
   plan-and-optimize.cc
   problem.cc
   problem-solver.cc
+  prune.cc
   random-shortcut.cc
   roadmap.cc
   straight-path.cc
@@ -70,6 +71,10 @@ SET(${LIBRARY_NAME}_SOURCES
   path-projector/global.cc
   path-projector.cc
   parser/roadmap-factory.cc
+  parabola/parabola-path.cc
+  parabola/steering-method-parabola.cc
+  parabola/parabola-planner.cc
+  contact-configuration-shooter.cc
   )
 
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src)

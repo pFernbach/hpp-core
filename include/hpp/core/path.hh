@@ -159,6 +159,12 @@ namespace hpp {
       /// Get the final configuration
       virtual Configuration_t end () const = 0;
 
+      /// Get coefficients if accurate for path (nothing by default)
+      virtual vector_t coefficients () const {
+	vector_t empty (1);
+	return empty;
+      }
+
     protected:
       /// Print path in a stream
       virtual std::ostream& print (std::ostream &os) const = 0;

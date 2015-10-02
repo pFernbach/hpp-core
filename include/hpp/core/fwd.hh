@@ -66,6 +66,7 @@ namespace hpp {
     HPP_PREDEF_CLASS (PlanAndOptimize);
     HPP_PREDEF_CLASS (Problem);
     class ProblemSolver;
+    HPP_PREDEF_CLASS (Prune);
     HPP_PREDEF_CLASS (RandomShortcut);
     HPP_PREDEF_CLASS (Roadmap);
     HPP_PREDEF_CLASS (SteeringMethod);
@@ -76,6 +77,7 @@ namespace hpp {
     HPP_PREDEF_CLASS (VisibilityPrmPlanner);
     HPP_PREDEF_CLASS (WeighedDistance);
     class KDTree;
+    HPP_PREDEF_CLASS (ContactConfigurationShooter);
 
     class ComparisonType;
     typedef boost::shared_ptr <ComparisonType> ComparisonTypePtr_t;
@@ -181,6 +183,7 @@ namespace hpp {
     typedef boost::shared_ptr <PlanAndOptimize> PlanAndOptimizePtr_t;
     typedef Problem* ProblemPtr_t;
     typedef ProblemSolver* ProblemSolverPtr_t;
+    typedef boost::shared_ptr <Prune> PrunePtr_t;
     typedef boost::shared_ptr <RandomShortcut> RandomShortcutPtr_t;
     typedef boost::shared_ptr <Roadmap> RoadmapPtr_t;
     typedef boost::shared_ptr <StraightPath> StraightPathPtr_t;
@@ -210,6 +213,8 @@ namespace hpp {
     typedef std::vector < NumericalConstraintPtr_t > NumericalConstraints_t;
     typedef std::map <std::string, CenterOfMassComputationPtr_t>
     CenterOfMassComputationMap_t;
+    typedef boost::shared_ptr < ContactConfigurationShooter >
+    ContactConfigurationShooterPtr_t;
 
     // Collision pairs
     typedef std::pair <CollisionObjectPtr_t, CollisionObjectPtr_t>
@@ -261,6 +266,18 @@ namespace hpp {
       HPP_PREDEF_CLASS (Interpolated);
       typedef boost::shared_ptr <Interpolated> InterpolatedPtr_t;
     } // namespace steeringMethod
+    
+    //namespace parabola { // TODO
+    HPP_PREDEF_CLASS (ParabolaPlanner);
+    typedef boost::shared_ptr <ParabolaPlanner> ParabolaPlannerPtr_t;
+    HPP_PREDEF_CLASS (SteeringMethodParabola);
+    typedef boost::shared_ptr <SteeringMethodParabola>
+    SteeringMethodParabolaPtr_t;
+    HPP_PREDEF_CLASS (ParabolaPath);
+    typedef boost::shared_ptr <ParabolaPath> ParabolaPathPtr_t;
+    typedef boost::shared_ptr <const ParabolaPath> ParabolaPathConstPtr_t;
+    //} // namespace parabola
+      
   } // namespace core
 } // namespace hpp
 

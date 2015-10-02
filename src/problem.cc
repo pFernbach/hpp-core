@@ -30,6 +30,8 @@
 #include <hpp/core/continuous-collision-checking/dichotomy.hh>
 #include <hpp/core/continuous-collision-checking/progressive.hh>
 #include <hpp/core/basic-configuration-shooter.hh>
+#include <hpp/core/parabola/steering-method-parabola.hh>
+
 
 namespace hpp {
   namespace core {
@@ -40,7 +42,8 @@ namespace hpp {
       robot_ (robot),
       distance_ (WeighedDistance::create (robot)),
       initConf_ (), goalConfigurations_ (),
-      steeringMethod_ (SteeringMethodStraight::create (this)),
+      //steeringMethod_ (SteeringMethodStraight::create (this)),
+      steeringMethod_ (SteeringMethodParabola::create (this)), //todo this
       configValidations_ (ConfigValidations::create ()),
       pathValidation_ (DiscretizedCollisionChecking::create
 		       (robot, 0.05)),
@@ -49,6 +52,19 @@ namespace hpp {
     {
       configValidations_->add (CollisionValidation::create (robot));
       configValidations_->add (JointBoundValidation::create (robot));
+      if (robot->getJointVector () [0]->name () == "base_joint_xyz") // 3D
+	robot_->setDimensionExtraConfigSpace (4);
+      else
+	robot_->setDimensionExtraConfigSpace (2);
+      model::ExtraConfigSpace& ecs = robot->extraConfigSpace ();
+      for (size_type i = 0; i < ecs.dimension (); i++) {
+	ecs.lower (i) = -1;
+	ecs.upper (i) = 1;
+      }
+      ecs.lower (ecs.dimension () - 1) = -M_PI;
+      ecs.upper (ecs.dimension () - 1) = M_PI;
+      // Do not allow z component of cone direction being negative ...
+      //ecs.lower (ecs.dimension () - 1) = 0;
     }
 
     // ======================================================================

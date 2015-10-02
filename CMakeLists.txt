@@ -91,6 +91,7 @@ SET(${PROJECT_NAME}_HEADERS
   include/hpp/core/plan-and-optimize.hh
   include/hpp/core/problem.hh
   include/hpp/core/problem-solver.hh
+  include/hpp/core/prune.hh
   include/hpp/core/random-shortcut.hh
   include/hpp/core/roadmap.hh
   include/hpp/core/steering-method.hh
@@ -106,6 +107,10 @@ SET(${PROJECT_NAME}_HEADERS
   include/hpp/core/path-projector.hh
   include/hpp/core/nearest-neighbor.hh
   include/hpp/core/parser/roadmap-factory.hh
+  include/hpp/core/parabola/parabola-planner.hh
+  include/hpp/core/parabola/parabola-path.hh
+  include/hpp/core/parabola/steering-method-parabola.hh
+  include/hpp/core/contact-configuration-shooter.hh
   )
 
 ADD_REQUIRED_DEPENDENCY("hpp-util >= 3")

@@ -527,6 +527,10 @@ namespace hpp {
       {
 	roadmap_ = roadmap;
       }
+      
+      /// From the solution path, update orientations info and re-build a path
+      /// with accurate orientations
+      PathVectorPtr_t createOrientations (PathVectorPtr_t path);
 
     protected:
       /// Constructor

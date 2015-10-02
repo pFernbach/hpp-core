@@ -203,6 +203,16 @@ namespace hpp {
       /// Set the vector of objects considered for collision detection
       void collisionObstacles (const ObjectVector_t& collisionObstacles);
       /// \}
+      
+      /// Get distanceBetweenObjects
+      DistanceBetweenObjectsPtr_t distanceBetweenObjects () const {
+	return distanceBetweenObjects_;
+      }
+
+      /// Set distanceBetweenObjects
+      void distanceBetweenObjects (const DistanceBetweenObjectsPtr_t& dbo){
+	distanceBetweenObjects_ = dbo;
+      }
 
     private :
       /// The robot
@@ -225,6 +235,8 @@ namespace hpp {
       ObjectVector_t collisionObstacles_;
       /// Set of constraints applicable to the robot
       ConstraintSetPtr_t constraints_;
+      /// Copy of complete distanceBetweenObjects_ from ProblemSolver
+      DistanceBetweenObjectsPtr_t distanceBetweenObjects_;
       /// Configuration shooter
       ConfigurationShooterPtr_t configurationShooter_;
     }; // class Problem
