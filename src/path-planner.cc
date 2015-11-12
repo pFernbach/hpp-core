@@ -135,11 +135,9 @@ namespace hpp {
 						     report);
           if (pathValid && validPath->timeRange ().second !=
               path->timeRange ().first) {
+	    hppDout (info, "add corresponding edges in RM");
             roadmap ()->addEdge (initNode, *itn, projPath);
-            interval_t timeRange = projPath->timeRange ();
-            roadmap ()->addEdge (*itn, initNode, projPath->extract
-                (interval_t (timeRange.second,
-                             timeRange.first)));
+	    roadmap ()->addEdge (*itn, initNode, projPath->reverse ());
           }
         }
       }

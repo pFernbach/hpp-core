@@ -147,8 +147,8 @@ namespace hpp {
 	return timeRange_;
       }
 
-      /// Get length of definition interval
-      value_type length () const
+      /// Get length of definition interval by default
+      virtual value_type length () const
       {
 	return timeRange_.second - timeRange_.first;
       }

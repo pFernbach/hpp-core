@@ -157,6 +157,12 @@ namespace hpp {
         return end_;
       }
 
+      /// Get length of definition interval
+      virtual value_type length () const
+      {
+	return timeRange ().second - timeRange ().first;
+      }
+
     protected:
       /// Print path in a stream
       virtual std::ostream& print (std::ostream &os) const

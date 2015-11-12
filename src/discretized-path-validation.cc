@@ -69,8 +69,10 @@ namespace hpp {
       assert (path);
       bool valid = true;
       if (reverse) {
-	value_type tmin = path->timeRange ().first;
-	value_type tmax = path->timeRange ().second;
+	//value_type tmin = path->timeRange ().first; // straight-path
+	//value_type tmax = path->timeRange ().second; // straight-path
+	value_type tmin = 0;
+	value_type tmax = path->length ();
 	value_type lastValidTime = tmax;
 	value_type t = tmax;
 	unsigned finished = 0;
@@ -98,8 +100,10 @@ namespace hpp {
 	  return false;
 	}
       } else {
-	value_type tmin = path->timeRange ().first;
-	value_type tmax = path->timeRange ().second;
+	//value_type tmin = path->timeRange ().first; // straight-path
+	//value_type tmax = path->timeRange ().second; // straight-path
+	value_type tmin = 0;
+	value_type tmax = path->length ();
 	value_type lastValidTime = tmin;
 	value_type t = tmin;
 	unsigned finished = 0;

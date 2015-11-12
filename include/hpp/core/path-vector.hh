@@ -130,6 +130,19 @@ namespace hpp {
       /// that there is no PathVector in the PathVector.
       void flatten (PathVectorPtr_t flattenedPath) const;
 
+      /// Get length of definition interval
+      virtual value_type length () const
+      {
+	value_type length = 0;
+	for (Paths_t::const_iterator it = paths_.begin ();
+	     it != paths_.end (); it++) {
+	  length += (*it)->length ();
+	}
+	hppDout (info, "length: " << length);
+	//return timeRange ().second - timeRange ().first; // straight-path
+	return length;
+      }
+
     protected:
       /// Print path in a stream
       virtual std::ostream& print (std::ostream &os) const

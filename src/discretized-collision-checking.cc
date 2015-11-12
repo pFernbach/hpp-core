@@ -36,6 +36,7 @@ namespace hpp {
     DiscretizedCollisionChecking::DiscretizedCollisionChecking
     (const DevicePtr_t& robot, const value_type& stepSize) :
       DiscretizedPathValidation (robot, stepSize)
+
     {
       add (CollisionValidationPtr_t (CollisionValidation::create (robot)));
     }
