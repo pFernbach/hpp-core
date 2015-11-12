@@ -67,7 +67,11 @@ namespace hpp {
       PathPlanner (problem, roadmap),
       workspaceDim_ (false)
     {
-      if (problem.collisionObstacles ().size () > 0) {
+      // Use the contact-config-shooter only if there is at least one obstacle
+      // made of triangles (mesh).
+      const ObjectVector_t& collisionObst = problem.collisionObstacles ();
+      if (collisionObst.size () > 0 && (*collisionObst.begin ())->fcl ()
+	  ->collisionGeometry ()->getNodeType () == fcl::BV_OBBRSS) {
 	hppDout (info, "create contact config shooter");
 	configurationShooter (ContactConfigurationShooter::create
 			      (problem.robot (), problem));

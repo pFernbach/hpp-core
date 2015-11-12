@@ -43,6 +43,7 @@
 #include <hpp/core/parabola-planner.hh>
 #include <hpp/core/parabola/parabola-path.hh>
 #include <hpp/core/contact-configuration-shooter.hh>
+#include <hpp/core/parabola/parabola-library.hh>
 
 namespace hpp {
   namespace core {
@@ -603,10 +604,8 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
       }
       
       // update waypoints orientations
-      ContactConfigurationShooterPtr_t ccs
-	(ContactConfigurationShooter::create (robot_, *problem_));
       for (std::size_t i = 0; i < waypoints.size (); i++) {
-	waypoints [i] = ccs->setOrientation (waypoints [i]);
+	waypoints [i] = setOrientation (robot_, waypoints [i]);
       }
 
       // loop to construct new path vector with parabPath constructor

@@ -111,6 +111,7 @@ SET(${PROJECT_NAME}_HEADERS
   include/hpp/core/parabola/parabola-path.hh
   include/hpp/core/parabola/steering-method-parabola.hh
   include/hpp/core/contact-configuration-shooter.hh
+  include/hpp/core/parabola/parabola-library.hh
   )
 
 ADD_REQUIRED_DEPENDENCY("hpp-util >= 3")

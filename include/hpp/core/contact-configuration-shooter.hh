@@ -57,10 +57,6 @@ namespace hpp {
       /// Sample a random configuration at a surface contact
       /// Inspired by RbPrm sampler
       virtual ConfigurationPtr_t shoot () const;
-
-      /// Arrange robot orientation according to the surface normal direction
-      /// So that the robot is "on" the surface, rotated
-      Configuration_t setOrientation (const Configuration_t& q) const;
  
     protected:
       /// Constructor, based on the RbPrmShooter one
