@@ -345,6 +345,7 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
       distanceBetweenObjects_ = DistanceBetweenObjectsPtr_t
 	(new DistanceBetweenObjects (robot_));
       distanceBetweenObjects_->obstacles(distanceObstacles_);
+      problem_->distanceBetweenObjects (distanceBetweenObjects_);
     }
 
     void ProblemSolver::resetRoadmap ()

@@ -3,7 +3,7 @@
 // Authors: Mylene Campana
 //
 // This file is part of hpp-core
-// hpp-core is free software: you can redistribute it
+// hpp-core is free software: you can redistribute it
 // and/or modify it under the terms of the GNU Lesser General Public
 // License as published by the Free Software Foundation, either version
 // 3 of the License, or (at your option) any later version.
@@ -32,10 +32,9 @@
 #include <hpp/core/roadmap.hh>
 #include <hpp/core/steering-method.hh>
 #include <hpp/core/basic-configuration-shooter.hh>
-#include <hpp/core/distance-between-objects.hh>
-#include <fcl/distance.h>
 #include <boost/tuple/tuple.hpp>
 #include <hpp/core/contact-configuration-shooter.hh>
+#include <hpp/core/configuration-projection-shooter.hh>
 
 namespace hpp {
   namespace core {
@@ -67,96 +66,36 @@ namespace hpp {
       PathPlanner (problem, roadmap),
       workspaceDim_ (false)
     {
-      // Use the contact-config-shooter only if there is at least one obstacle
-      // made of triangles (mesh).
+      // Use the contact-config-shooter only if there is at least one obstacle,
+      // and if all obstacles are meshes.
+      bool noContactShooter = false;
       const ObjectVector_t& collisionObst = problem.collisionObstacles ();
-      if (collisionObst.size () > 0 && (*collisionObst.begin ())->fcl ()
-	  ->collisionGeometry ()->getNodeType () == fcl::BV_OBBRSS) {
+      if (collisionObst.size () > 0) {
+	for (ObjectVector_t::const_iterator objit = collisionObst.begin();
+	     objit != collisionObst.end(); ++objit) {
+	  if ((*objit)->fcl ()->collisionGeometry ()->getNodeType () !=
+	      fcl::BV_OBBRSS)
+	    noContactShooter = true;
+	}
+      } 
+      else
+	noContactShooter = true;
+      if (!noContactShooter) {
 	hppDout (info, "create contact config shooter");
 	configurationShooter (ContactConfigurationShooter::create
 			      (problem.robot (), problem));
       }
-      else
-	configurationShooter (BasicConfigurationShooter::create
-			      (problem.robot ()));
+      else {
+	hppDout (info, "create config projection shooter");
+	configurationShooter (ConfigurationProjectionShooter::create
+			      (problem.robot (), problem, 0.02));
+      }
     }
 
     void ParabolaPlanner::init (const ParabolaPlannerWkPtr_t& weak)
     {
       PathPlanner::init (weak);
       weakPtr_ = weak;
-    }
-
-    Configuration_t ParabolaPlanner::project (const Configuration_t& q)
-    {
-      Configuration_t q_proj = q;
-      DevicePtr_t robot (problem ().robot ());
-      fcl::Vec3f pi, pj, dir; // fcl nearest points of collision pairs
-      value_type minDistance = std::numeric_limits <value_type>::infinity();
-      value_type distance = minDistance;
-
-      DistanceBetweenObjectsPtr_t distanceBetweenObjects
-	(problem ().distanceBetweenObjects ());
-      robot->currentConfiguration (q);
-      robot->computeForwardKinematics ();
-      distanceBetweenObjects->computeDistances (); // only outers !
-      const model::DistanceResults_t& dr =
-	distanceBetweenObjects->distanceResults ();
-
-      for (model::DistanceResults_t::const_iterator itDistance = 
-	     dr.begin (); itDistance != dr.end (); itDistance++) {
-	distance = itDistance->distance ();
-	if (distance < minDistance){
-	  minDistance = distance;
-	  pi = itDistance->closestPointInner (); // point Body
-	  pj = itDistance->closestPointOuter (); // point Obst
-	  dir = pi - pj; // obstacle normale direction
-	}
-      }
-      hppDout (info, "minDistance: " << minDistance);
-      hppDout (info, "pi: " << pi);
-      hppDout (info, "pj: " << pj);
-      hppDout (info, "dir: " << dir);
-
-      const value_type dir_norm = sqrt (dir [0]*dir [0] + dir [1]*dir [1]
-					+ dir [2]*dir [2]);
-      const size_type index = robot->configSize()
-	- robot->extraConfigSpace ().dimension (); // ecs index
-      if (!workspaceDim_) { /* 2D gamma and projection*/
-	q_proj (0) -= dir [0]; // x part
-	q_proj (1) -= dir [1]; // y part
-	q_proj (index) = dir [0]/dir_norm;
-	q_proj (index+1) = dir [1]/dir_norm;
-      }
-      else { /* 3D gamma and projection*/
-	q_proj (0) -= dir [0]; // x part
-	q_proj (1) -= dir [1]; // y part
-	q_proj (2) -= dir [2]; // z part
-	q_proj (index) = dir [0]/dir_norm;
-	q_proj (index+1) = dir [1]/dir_norm;
-	q_proj (index+2) = dir [2]/dir_norm;
-      }
-      hppDout (info, "q_proj: " << displayConfig (q_proj));
-      return q_proj;
-    }
-	
-    Configuration_t ParabolaPlanner::contactShift(const Configuration_t& q)
-      const {
-      Configuration_t q_shift = q;
-      const value_type dist = 0.01; // shift distance
-      if (!workspaceDim_) { /* 2D */
-	const value_type gamma = atan2(q (3), q (2)) - M_PI/2;
-	q_shift (0) -= dist*sin(gamma); // x part
-	q_shift (1) += dist*cos(gamma); // y part
-      }
-      else { /* 3D */
-	const size_type index = problem ().robot ()->configSize()
-	  - problem ().robot ()->extraConfigSpace ().dimension ();
-	q_shift (0) += dist * q (index); // x part
-	q_shift (1) += dist * q (index + 1); // y part
-	q_shift (2) += dist * q (index + 2); // z part
-      }
-      return q_shift;
     }
 
     void ParabolaPlanner::oneStep ()
@@ -169,6 +108,8 @@ namespace hpp {
       ConfigValidationsPtr_t configValidations (problem ().configValidations());
       SteeringMethodPtr_t sm (problem ().steeringMethod ());
       PathPtr_t validPath, validPart, localPath;
+      ValidationReportPtr_t validationReport;
+      PathValidationReportPtr_t report;
       bool fwdEdgeExists, bwdEdgeExists, validConfig;
       DelayedEdge_t fwdDelayedEdge, bwdDelayedEdge;
       DelayedEdges_t fwdDelayedEdges, bwdDelayedEdges;
@@ -184,13 +125,10 @@ namespace hpp {
       // shoot a valid random configuration
       // and try to project this configuration at the contact of an obstacle
       ConfigurationPtr_t qrand;
-      Configuration_t q_tmp (robot->configSize ());
       do {
 	validConfig = false;
 	qrand = configurationShooter_->shoot ();
-	if (configValidations->validate (*qrand)) {
-	  //q_tmp = project (*qrand);
-	  q_tmp = *qrand;
+	if (configValidations->validate (*qrand, validationReport)) {
 	  validConfig = true;
 	  /*if(!workspaceDim_)
 	    validConfig = q_tmp (index + 1) >= 0;
@@ -200,18 +138,7 @@ namespace hpp {
 	}
       } while (!validConfig);
       hppDout (info, "qrand: " << displayConfig (*qrand));
-
-      /* Set to zero DoF other than translations and dir
-	 NOT ADAPTED TO QUATERNION
-	 if (robot->configSize() > robot->extraConfigSpace ().dimension ()*2) { 
-	 for (size_type i = robot->extraConfigSpace ().dimension ();
-	 i < index; i++) {
-	 q_tmp (i) = 0;
-	 }
-	 }*/
-      hppDout (info, "q_tmp: " << displayConfig (q_tmp));
-      //ConfigurationPtr_t q_proj ( new Configuration_t (contactShift(q_tmp)));
-      ConfigurationPtr_t q_proj ( new Configuration_t (q_tmp));
+      ConfigurationPtr_t q_proj ( new Configuration_t (*qrand));
       hppDout (info, "q_proj: " << displayConfig (*q_proj));
       
 
@@ -239,8 +166,8 @@ namespace hpp {
 	    localPath = (*sm) (*qCC, *q_proj);
 
 	    // validate forward local path
-	    if (localPath &&
-		pathValidation->validate (localPath, false, validPart)) {
+	    if (localPath && pathValidation->validate (localPath, false,
+						       validPart, report)) {
 	      hppDout (info, "forward path from SM is valid");
 	      // Save node from current cc that leads to shortest path
 	      if (localPath->length () < length) {
@@ -256,8 +183,8 @@ namespace hpp {
 	    localPath = (*sm) (*q_proj, *qCC);
 
 	    // validate backward local path
-	    if (localPath &&
-		pathValidation->validate (localPath, false, validPart)) {
+	    if (localPath && pathValidation->validate (localPath, false,
+						       validPart, report)) {
 	      hppDout (info, "backward path from SM is valid");
 	      // Save node from current cc that leads to shortest path
 	      if (localPath->length () < length) {

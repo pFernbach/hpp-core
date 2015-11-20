@@ -53,12 +53,6 @@ namespace hpp {
       /// Store weak pointer to itself
       void init (const ParabolaPlannerWkPtr_t& weak);
 
-      /// Project the configuration at the contact of the nearest obstacle
-      Configuration_t project (const Configuration_t& q);
-	  
-      /// Shift a projected configuration to remove it from contact
-      Configuration_t contactShift (const Configuration_t& q) const;
-
     private:
       ConfigurationShooterPtr_t configurationShooter_;
       ParabolaPlannerWkPtr_t weakPtr_;

@@ -78,6 +78,7 @@ namespace hpp {
     HPP_PREDEF_CLASS (WeighedDistance);
     class KDTree;
     HPP_PREDEF_CLASS (ContactConfigurationShooter);
+    HPP_PREDEF_CLASS (ConfigurationProjectionShooter);
 
     class ComparisonType;
     typedef boost::shared_ptr <ComparisonType> ComparisonTypePtr_t;
@@ -215,6 +216,8 @@ namespace hpp {
     CenterOfMassComputationMap_t;
     typedef boost::shared_ptr < ContactConfigurationShooter >
     ContactConfigurationShooterPtr_t;
+    typedef boost::shared_ptr < ConfigurationProjectionShooter >
+    ConfigurationProjectionShooterPtr_t;
 
     // Collision pairs
     typedef std::pair <CollisionObjectPtr_t, CollisionObjectPtr_t>
