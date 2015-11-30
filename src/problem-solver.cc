@@ -519,6 +519,7 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
         problem ()->addObstacle (object);
       if (distanceBetweenObjects_) {
 	distanceBetweenObjects_->addObstacle (object);
+	problem_->distanceBetweenObjects (distanceBetweenObjects_);
       }
       obstacleMap_ [object->name ()] = object;
     }
@@ -607,6 +608,7 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
       // update waypoints orientations
       for (std::size_t i = 0; i < waypoints.size (); i++) {
 	waypoints [i] = setOrientation (robot_, waypoints [i]);
+	hppDout (info, "new wp(i): " << displayConfig (waypoints [i]));
       }
 
       // loop to construct new path vector with parabPath constructor
