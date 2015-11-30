@@ -26,6 +26,7 @@
 # include <hpp/model/joint-configuration.hh>
 # include <hpp/core/configuration-shooter.hh>
 # include <hpp/core/distance-between-objects.hh>
+# include <hpp/core/config-validations.hh>
 # include <fcl/distance.h>
 
 namespace hpp {
@@ -49,15 +50,15 @@ namespace hpp {
 	ptr->init (shPtr);
 	return shPtr;
       }
-      virtual ConfigurationPtr_t shoot () const
-      {
-	/* Uniformly sample a configuration */
+
+      /// Uniformly sample a configuration
+      Configuration_t uniformlySample () const {
+	Configuration_t q (robot_->configSize ());
 	JointVector_t jv = robot_->getJointVector ();
-	ConfigurationPtr_t config (new Configuration_t (robot_->configSize ()));
 	for (JointVector_t::const_iterator itJoint = jv.begin ();
 	     itJoint != jv.end (); itJoint++) {
 	  std::size_t rank = (*itJoint)->rankInConfiguration ();
-	  (*itJoint)->configuration ()->uniformlySample (rank, *config);
+	  (*itJoint)->configuration ()->uniformlySample (rank, q);
 	}
 	// Shoot extra configuration variables
 	size_type extraDim = robot_->extraConfigSpace ().dimension ();
@@ -73,14 +74,31 @@ namespace hpp {
 	    oss << i << ". min = " <<lower<< ", max = " << upper << std::endl;
 	    throw std::runtime_error (oss.str ());
 	  }
-	  (*config) [offset + i] = lower + (upper - lower) * rand ()/RAND_MAX;
+	  q [offset + i] = lower + (upper - lower) * rand ()/RAND_MAX;
 	}
+	return q;
+      }
+
+      virtual ConfigurationPtr_t shoot () const
+      {
+	ConfigValidationsPtr_t configValidations (problem_.configValidations());
+	ValidationReportPtr_t validationReport;
+	ConfigurationPtr_t config (new Configuration_t (robot_->configSize ()));
+	// while config in collision, resample config
+	do {
+	  *config = uniformlySample ();
+	}
+	while (!configValidations->validate (*config, validationReport));
+	//hppDout (info, "coll-free config: " << displayConfig (*config));
+
 	/* Project on nearest obstacle and shift away*/
 	*config = project (*config);
-	hppDout (info, "config: " << displayConfig (*config));
+	//hppDout (info, "config: " << displayConfig (*config));
 	return config;
       }
-	  
+      
+      /// Project the given configuration on the nearest obstacle,
+      /// then shift it to avoid contact
       Configuration_t project (const Configuration_t q) const {
 	Configuration_t qout = q;
 	fcl::Vec3f pi, pj, dir; // fcl nearest points of collision pairs
@@ -88,8 +106,9 @@ namespace hpp {
 	value_type distance = minDistance;
 
 	DistanceBetweenObjectsPtr_t distanceBetweenObjects
-	  (problem_.distanceBetweenObjects ()); // problem's distBtwObj not filled yet
+	  (problem_.distanceBetweenObjects ());
 	robot_->currentConfiguration (q);
+	hppDout (info, "q: " << displayConfig (q));
 	robot_->computeForwardKinematics ();
 	distanceBetweenObjects->computeDistances (); // only outers !
 	const model::DistanceResults_t& dr =
@@ -139,9 +158,9 @@ namespace hpp {
 	  qout (1) += shiftDistance_*cos(gamma); // y part
 	}
 	else { /* 3D */
-	  qout (0) += shiftDistance_ * q (index); // x part
-	  qout (1) += shiftDistance_ * q (index + 1); // y part
-	  qout (2) += shiftDistance_ * q (index + 2); // z part
+	  qout (0) += shiftDistance_ * qout (index); // x part
+	  qout (1) += shiftDistance_ * qout (index + 1); // y part
+	  qout (2) += shiftDistance_ * qout (index + 2); // z part
 	}
 	return qout;
       }
