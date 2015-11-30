@@ -585,16 +585,20 @@ namespace hpp {
       // for N = 4, computation error ~= 1e-5. 
       // for N = 20, computation error ~= 1e-11. 
       value_type length = 0;
-      value_type x1, x2;
+      value_type x1 = q1 (0);
+      value_type x2 = q2 (0);
+
+      if (workspaceDim_) { // 3D
+	const value_type theta = coefs (3);
+	x1 = cos(theta) * q1 (0)  + sin(theta) * q1 (1); // x_theta_0
+	x2 = cos(theta) * q2 (0) + sin(theta) * q2 (1); // x_theta_imp
+      }
 
       // Define integration bounds
-      if (q1 (0) < q2 (0)) {
-	x1 = q1 (0);
-	x2 = q2 (0);
-      }
-      else { // re-order
-	x1 = q2 (0);
-	x2 = q1 (0);
+      if (x1 > x2) { // re-order integration bounds
+	const value_type xtmp = x1;
+	x1 = x2;
+	x2 = xtmp;
       }
 
       const value_type dx = (x2 - x1) / N; // integration step size
