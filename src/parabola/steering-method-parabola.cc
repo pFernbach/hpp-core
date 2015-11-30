@@ -357,18 +357,20 @@ namespace hpp {
       //value_type alpha = 0.5*(alpha_inf_bound + alpha_sup_bound); // better
       hppDout (info, "alpha: " << alpha);
       
-      /* Compute Parabola */
-      value_type x_theta_0_dot = sqrt((g_ * X_theta * X_theta)
-				      /(2 * (X_theta*tan(alpha) - Z)));
+      /* Compute Parabola initial speed*/
+      const value_type x_theta_0_dot = sqrt((g_ * X_theta * X_theta)
+					    /(2 * (X_theta*tan(alpha) - Z)));
+      const value_type inv_x_th_dot_0_sq = 1/(x_theta_0_dot*x_theta_0_dot);
       const value_type V0 = sqrt((1 + tan(alpha)*tan(alpha))) * x_theta_0_dot;
       hppDout (info, "V0: " << V0);
 
+      /* Compute Parabola coefficients */
       vector_t coefs (5);
       coefs.resize (5);
-      coefs (0) = -0.5*g_/(x_theta_0_dot*x_theta_0_dot);
-      coefs (1) = tan(alpha) + g_*x_theta_0/(x_theta_0_dot*x_theta_0_dot);
+      coefs (0) = -0.5*g_*inv_x_th_dot_0_sq;
+      coefs (1) = tan(alpha) + g_*x_theta_0*inv_x_th_dot_0_sq;
       coefs (2) = z_0 - tan(alpha)*x_theta_0 -
-	0.5*g_*x_theta_0*x_theta_0/(x_theta_0_dot*x_theta_0_dot);
+	0.5*g_*x_theta_0*x_theta_0*inv_x_th_dot_0_sq;
       coefs (3) = theta; // NOT tan(theta) !
       coefs (4) = -tan(theta)*x_0 + y_0;
       hppDout (info, "coefs: " << coefs.transpose ());
@@ -561,20 +563,12 @@ namespace hpp {
     }
   }
 
-    // Function equivalent to sqrt( 1 + f'(x)^2 ) in 2D
-    // Function equivalent to sqrt( 1 + y0_dot/x0_dot + fz'(x)^2 ) in 3D
+    // Function equivalent to sqrt( 1 + f'(x)^2 )
     value_type SteeringMethodParabola::lengthFunction (const value_type x,
 						       const vector_t coefs)
       const {
-      value_type y;
-      if (!workspaceDim_) { // 2D
-	y = sqrt (1+(2*coefs (0)*x+coefs (1))
-		  * (2*coefs (0)*x+coefs (1)));
-      }
-      else {
-	y = sqrt (1 + tan(coefs (3))*tan(coefs (3)) + (2*coefs (0)*x+coefs (1))
-		  * (2*coefs (0)*x+coefs (1)));
-      }
+      const value_type y = sqrt (1+(2*coefs (0)*x+coefs (1))
+				 * (2*coefs (0)*x+coefs (1)));
       return y;
     }
 
