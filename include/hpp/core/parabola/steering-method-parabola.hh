@@ -71,13 +71,13 @@ namespace hpp {
 	workspaceDim_ (false)
 	  {
 	  }
-      
+
       /// Copy constructor
       SteeringMethodParabola (const SteeringMethodParabola& other) :
 	SteeringMethod (other), device_ (other.device_),
 	distance_ (other.distance_), weak_ (), g_(other.g_),
-	V0max_ (other.V0max_), mu_ (other.mu_), Dalpha_ (other.Dalpha_),
-	workspaceDim_ (other.workspaceDim_)
+	V0max_ (other.V0max_), Vimpmax_ (other.Vimpmax_),mu_ (other.mu_),
+	Dalpha_ (other.Dalpha_), workspaceDim_ (other.workspaceDim_)
 	{
 	}
 
@@ -101,8 +101,8 @@ namespace hpp {
       /// fill alpha_lim_plus/minus angles limiting initial angle
       /// to respect the constraint.
       bool second_constraint (const value_type& X, const value_type& Y,
-			      value_type *alpha_imp_plus,
-			      value_type *alpha_imp_minus) const;
+			      value_type *alpha_lim_plus,
+			      value_type *alpha_lim_minus) const;
 
       /// Compute third constraint : landing in the friction cone
       /// return false if constraint can never be respected.
@@ -122,6 +122,14 @@ namespace hpp {
 			      const int number,
 			      value_type *delta) const;
 
+      /// Compute sixth constraint: V_imp <= V_imp_max
+      /// return false if constraint can never be respected.
+      /// fill alpha_imp_plus/minus angles limiting initial angle
+      /// to respect the constraint.
+      bool sixth_constraint (const value_type& X, const value_type& Y,
+			     value_type *alpha_imp_plus,
+			     value_type *alpha_imp_minus) const;
+
       /// Get the length of the path by numerical integration (Simpson method)
       /// Length is computed only when the path is created
       virtual value_type computeLength (const ConfigurationIn_t q1,
@@ -137,6 +145,7 @@ namespace hpp {
       SteeringMethodParabolaWkPtr_t weak_;
       value_type g_; // gravity constant
       value_type V0max_; // maximal initial velocity
+      value_type Vimpmax_; // maximal landing velocity
       value_type mu_; // friction coefficient
       value_type Dalpha_; // alpha increment
       mutable bool workspaceDim_; // true for 3D, false for 2D

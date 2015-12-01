@@ -36,7 +36,7 @@ namespace hpp {
       hppDout (info, "q_init: " << displayConfig (q1));
       hppDout (info, "q_goal: " << displayConfig (q2));
       hppDout (info, "g_: " << g_ << " , mu_: " << mu_ << " , V0max: " <<
-	       V0max_);
+	       V0max_ << " , Vimpmax: " << Vimpmax_);
 
       /* Define dimension: 2D or 3D */
       std::string name = device_.lock ()->getJointVector () [0]->name ();
@@ -287,7 +287,6 @@ namespace hpp {
 
       value_type alpha_lim_plus;
       value_type alpha_lim_minus;
-
       bool fail = second_constraint (X_theta, Z, &alpha_lim_plus,
 				     &alpha_lim_minus);
       hppDout (info, "alpha_lim_plus: " << alpha_lim_plus);
@@ -298,17 +297,27 @@ namespace hpp {
 	return PathPtr_t ();
       }
 
+      value_type alpha_imp_plus;
+      value_type alpha_imp_minus;
+      bool fail6 = sixth_constraint (X_theta, Z, &alpha_imp_plus,
+				     &alpha_imp_minus);
+      hppDout (info, "alpha_imp_plus: " << alpha_imp_plus);
+      hppDout (info, "alpha_imp_minus: " << alpha_imp_minus);
+
+      if (fail6) {
+	hppDout (info, "failed to apply 6th constraint");
+	return PathPtr_t ();
+      }
+
       value_type alpha_imp_inf;
       value_type alpha_imp_sup;
-
-      //bool fail = 0;
-      fail = third_constraint (fail, X_theta, Z, alpha_imp_min,
-			       alpha_imp_max, &alpha_imp_sup,
-			       &alpha_imp_inf);
+      bool fail3 = third_constraint (fail, X_theta, Z, alpha_imp_min,
+				     alpha_imp_max, &alpha_imp_sup,
+				     &alpha_imp_inf);
       hppDout (info, "alpha_imp_inf: " << alpha_imp_inf);
       hppDout (info, "alpha_imp_sup: " << alpha_imp_sup);
 
-      if (fail) {
+      if (fail3) {
 	hppDout (info, "failed to apply 3rd constraint");
 	return PathPtr_t ();
       }
@@ -318,28 +327,34 @@ namespace hpp {
 
       /* Define alpha_0 interval satisfying constraints */
       if (n2_angle > 0) {
-	alpha_inf_bound = std::max (std::max(alpha_imp_inf, alpha_lim_minus),
+	alpha_lim_minus = std::max(alpha_lim_minus, alpha_imp_minus);
+	alpha_inf_bound = std::max (std::max(alpha_imp_inf,alpha_lim_minus),
 				    std::max(alpha_0_min, alpha_inf4 +Dalpha_));
 
 	if (alpha_imp_min < -M_PI/2) {
+	  alpha_lim_plus = std::min(alpha_lim_plus, alpha_imp_plus);
 	  alpha_sup_bound = std::min(alpha_0_max,
 				     std::min(alpha_lim_plus,M_PI/2));
 	}
 	else {
+	  alpha_lim_plus = std::min(alpha_lim_plus, alpha_imp_plus);
 	  alpha_sup_bound = std::min(std::min(alpha_0_max, M_PI/2),
 				     std::min(alpha_lim_plus, alpha_imp_sup));
 	}
       }
       else { // down-oriented cone
 	if (alpha_imp_max < M_PI/2) {
+	  alpha_lim_minus = std::max(alpha_lim_minus, alpha_imp_minus);
 	  alpha_inf_bound = std::max (std::max(alpha_imp_inf, alpha_lim_minus),
 				      std::max(alpha_0_min, alpha_inf4 +
 					       Dalpha_));
 	}
 	else { // alpha_imp_max >= M_PI/2 so alpha_imp_inf inaccurate
+	  alpha_lim_minus = std::max(alpha_lim_minus, alpha_imp_minus);
 	  alpha_inf_bound = std::max (std::max(alpha_0_min, alpha_inf4 +
 					       Dalpha_) , alpha_lim_minus);
 	}
+	alpha_lim_plus = std::min(alpha_lim_plus, alpha_imp_plus);
 	alpha_sup_bound = std::min(std::min(alpha_0_max, M_PI/2),
 				   std::min(alpha_lim_plus, alpha_imp_sup));
       }
@@ -357,12 +372,14 @@ namespace hpp {
       //value_type alpha = 0.5*(alpha_inf_bound + alpha_sup_bound); // better
       hppDout (info, "alpha: " << alpha);
       
-      /* Compute Parabola initial speed*/
+      /* Compute Parabola initial and final velocities */
       const value_type x_theta_0_dot = sqrt((g_ * X_theta * X_theta)
 					    /(2 * (X_theta*tan(alpha) - Z)));
       const value_type inv_x_th_dot_0_sq = 1/(x_theta_0_dot*x_theta_0_dot);
       const value_type V0 = sqrt((1 + tan(alpha)*tan(alpha))) * x_theta_0_dot;
       hppDout (info, "V0: " << V0);
+      const value_type Vimp = sqrt(1 + (-g_*X*inv_x_th_dot_0_sq+tan(alpha)) *(-g_*X*inv_x_th_dot_0_sq+tan(alpha))) * x_theta_0_dot; // x_theta_0_dot > 0
+      hppDout (info, "Vimp: " << Vimp);
 
       /* Compute Parabola coefficients */
       vector_t coefs (5);
@@ -560,8 +577,34 @@ namespace hpp {
 	*delta = 0.5*acos (cos2delta);
 	return true;
       }
+      }
     }
-  }
+
+    bool SteeringMethodParabola::sixth_constraint (const value_type& X,
+						    const value_type& Y,
+						    value_type *alpha_imp_plus,
+						    value_type *alpha_imp_minus)
+      const {
+      bool fail = 0;
+      const value_type A = g_*X*X;
+      const value_type B = -2*X*Vimpmax_*Vimpmax_ - 4*X*Y*g_;
+      const value_type C = g_*X*X + 2*Y*Vimpmax_*Vimpmax_ + 4*g_*Y*Y;
+      const value_type delta = B*B -4*A*C;
+
+      if (delta < 0)
+	fail = 1;
+      else {
+	if (X > 0) {
+	  *alpha_imp_plus = atan(0.5*(-B + sqrt(delta))/A);
+	  *alpha_imp_minus = atan(0.5*(-B - sqrt(delta))/A);
+	}
+	else {
+	  *alpha_imp_plus = atan(0.5*(-B + sqrt(delta))/A) + M_PI;
+	  *alpha_imp_minus = atan(0.5*(-B - sqrt(delta))/A) + M_PI;
+	}
+      }
+      return fail;
+    }
 
     // Function equivalent to sqrt( 1 + f'(x)^2 )
     value_type SteeringMethodParabola::lengthFunction (const value_type x,
