@@ -185,13 +185,14 @@ namespace hpp {
 						       validPart, report)) {
 	      hppDout (info, "forward path from SM is valid");
 	      // Save node from current cc that leads to shortest path
-	      if (localPath->length () < lengthFwd) {
-		fwdEdgeExists = true;
-		lengthFwd = localPath->length ();
-		// Save forward delayed edge from cc with shorter path
-		fwdDelayedEdge = DelayedEdge_t (*n_it, q_proj, localPath);
-		hppDout (info, "forward delayed edge is saved");
-	      }
+	      //if (localPath->length () < lengthFwd) {
+	      //fwdEdgeExists = true;
+	      //lengthFwd = localPath->length ();
+	      // Save forward delayed edge from cc with shorter path
+	      fwdDelayedEdge = DelayedEdge_t (*n_it, q_proj, localPath);
+	      hppDout (info, "forward delayed edge is saved and pushed");
+	      fwdDelayedEdges.push_back (fwdDelayedEdge);
+	      //}
 	    }
 
 	    // Create backward local path from q_proj to qCC
@@ -204,21 +205,22 @@ namespace hpp {
 						       validPart, report)) {
 	      hppDout (info, "backward path from SM is valid");
 	      // Save node from current cc that leads to shortest path
-	      if (localPath->length () < lengthBwd) {
-		bwdEdgeExists = true;
-		lengthBwd = localPath->length ();
-		// Save backward delayed edge from cc with shorter path
-		// keeping n_it* information for later edge adding...
-		bwdDelayedEdge = DelayedEdge_t (*n_it, q_proj, localPath);
-		hppDout (info, "backward delayed edge is saved");
-	      }
+	      //if (localPath->length () < lengthBwd) {
+	      //bwdEdgeExists = true;
+	      //lengthBwd = localPath->length ();
+	      // Save backward delayed edge from cc with shorter path
+	      // keeping n_it* information for later edge adding...
+	      bwdDelayedEdge = DelayedEdge_t (*n_it, q_proj, localPath);
+	      hppDout (info, "backward delayed edge is saved and pushed");
+	      bwdDelayedEdges.push_back (bwdDelayedEdge);
+	      //}
 	    }
 
 	  }
-	  if (fwdEdgeExists) // avoid adding a null delayed-edge ...
-	    fwdDelayedEdges.push_back (fwdDelayedEdge); // shortest path from cc
-	  if (bwdEdgeExists) // avoid adding a null delayed-edge ...
-	    bwdDelayedEdges.push_back (bwdDelayedEdge); // shortest path from cc
+	  //if (fwdEdgeExists) // avoid adding a null delayed-edge ...
+	  //fwdDelayedEdges.push_back (fwdDelayedEdge); // shortest path from cc
+	  //if (bwdEdgeExists) // avoid adding a null delayed-edge ...
+	  //bwdDelayedEdges.push_back (bwdDelayedEdge); // shortest path from cc
 	  
 	}// for nodes in cc
       }//for cc in roadmap
