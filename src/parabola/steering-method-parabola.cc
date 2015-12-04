@@ -481,48 +481,58 @@ namespace hpp {
       const value_type phi = atan (mu_);
       const value_type psi = M_PI/2 - atan2 (W,U*cos(theta)+V*sin(theta));
       hppDout (info, "psi: " << psi);
+      const bool nonVerticalCone = (psi < -phi && psi >= -M_PI/2)
+	|| (psi > phi && psi < M_PI - phi) 
+	|| (psi > M_PI + phi && psi <= 3*M_PI/2);
       
       if (theta != M_PI /2 && theta != -M_PI /2) {
 	value_type x_plus, x_minus, z_x_plus, z_x_minus;
 	value_type tantheta = tan(theta);
 	value_type discr = (U*U+W*W)*mu_*mu_ - V*V - U*U*tantheta*tantheta + (V*V + W*W)*mu_*mu_*tantheta*tantheta + 2*(1+mu_*mu_)*U*V*tantheta;
 	hppDout (info, "discr: " << discr);
-	if (discr < 1e-1)
+	if (discr < 1e-1) {
+	  hppDout (info, "cone-plane intersection too small");
 	  return false;
-	
+	}
+	const value_type denomK = U*U + V*V - W*W*mu_*mu_;
+	const value_type K1 = (sqrt(discr) + U*W + U*W*mu_*mu_ + V*W*tantheta + V*W*mu_*mu_*tantheta)/denomK;
+	const value_type K2 = (-sqrt(discr) + U*W + U*W*mu_*mu_ + V*W*tantheta + V*W*mu_*mu_*tantheta)/denomK;
+	hppDout (info, "denomK= " << denomK);
 	value_type x = 0.5;
-	if ((psi < -phi && psi > -M_PI/2) || (psi > phi && psi < M_PI - phi)) {
+	if (nonVerticalCone) {
 	  // not "vertical" cone
 	  if (U < 0)
 	    x = -0.5;
 	  // non-vertical up (default)
+	  hppDout (info, "non-vertical up");
 	  x_minus = x;
 	  x_plus = x;
-	  z_x_minus = x*(-sqrt(discr) + U*W + U*W*mu_*mu_ + V*W*tantheta + V*W*mu_*mu_*tantheta)/(U*U + V*V - W*W*mu_*mu_);
-	  z_x_plus = x*(sqrt(discr) + U*W + U*W*mu_*mu_ + V*W*tantheta + V*W*mu_*mu_*tantheta)/(U*U + V*V - W*W*mu_*mu_);
+	  z_x_minus = x*K2;
+	  z_x_plus = x*K1;
 
 	  if (psi > M_PI/2) {// down: invert z_plus and z_minus
 	    hppDout (info, "non-vertical down");
-	    z_x_plus = x*(-sqrt(discr) + U*W + U*W*mu_*mu_ + V*W*tantheta + V*W*mu_*mu_*tantheta)/(U*U + V*V - W*W*mu_*mu_);
-	    z_x_minus = x*(sqrt(discr) + U*W + U*W*mu_*mu_ + V*W*tantheta + V*W*mu_*mu_*tantheta)/(U*U + V*V - W*W*mu_*mu_);
+	    z_x_plus = x*K2;
+	    z_x_minus = x*K1;
 	  }
 	}
 	else { // "vertical" cone
 	  if (- phi <= psi && psi <=  phi) { // up
 	    hppDout (info, "vertical up");
 	    x_minus = x;
-	    z_x_minus = x*(-sqrt(discr) + U*W + U*W*mu_*mu_ + V*W*tantheta + V*W*mu_*mu_*tantheta)/(U*U + V*V - W*W*mu_*mu_);
+	    z_x_minus = x*K2;
 	    x = -x;
 	    x_plus = x;
-	    z_x_plus = x*(sqrt(discr) + U*W + U*W*mu_*mu_ + V*W*tantheta + V*W*mu_*mu_*tantheta)/(U*U + V*V - W*W*mu_*mu_);
+	    z_x_plus = x*K1;
 	  }
 	  else { // down
 	    hppDout (info, "vertical down");
-	    x_plus = x;
-	    z_x_plus = x*(sqrt(discr) + U*W + U*W*mu_*mu_ + V*W*tantheta + V*W*mu_*mu_*tantheta)/(U*U + V*V - W*W*mu_*mu_);
-	    x = -x;
+	    x = -0.5;
 	    x_minus = x;
-	    z_x_minus = x*(-sqrt(discr) + U*W + U*W*mu_*mu_ + V*W*tantheta + V*W*mu_*mu_*tantheta)/(U*U + V*V - W*W*mu_*mu_);
+	    z_x_minus = x*K2;
+	    x = -x;
+	    x_plus = x;
+	    z_x_plus = x*K1;
 	  }
 	  x = -x; // revert previous operation
 	}
@@ -534,16 +544,20 @@ namespace hpp {
 	hppDout (info, "z_x_plus: " << z_x_plus);
 	hppDout (info, "z_x_minus: " << z_x_minus);
 	
-	if ((psi < -phi && psi > -M_PI/2) || (psi > phi && psi < M_PI - phi)) {
+	if (nonVerticalCone) {
 	  // not "vertical" cone
 	  value_type cos2delta = 1.0/sqrt(pow(fabs(tantheta*x),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(sqrt(discr)*x+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x),2.0)+pow(fabs(x),2.0))*1.0/sqrt(pow(fabs(tantheta*x),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(-sqrt(discr)*x+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x),2.0)+pow(fabs(x),2.0))*((tantheta*tantheta)*(x*x)+x*x+1.0/pow(U*U+V*V-(W*W)*(mu_*mu_),2.0)*(sqrt(discr)*x+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x)*(-sqrt(discr)*x+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x));
+	  hppDout (info, "cos(2*delta) old: " << cos2delta);
 	  //1.0/sqrt(pow(fabs(tanTheta*x),2.0)+pow(fabs(x),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(sqrt(-(U*U)*(y*y)-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(V*V)*(mu_*mu_)*(y*y)+(W*W)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(y*y)+U*V*x*y*2.0+U*V*(mu_*mu_)*x*y*2.0)+U*W*x+V*W*y+U*W*(mu_*mu_)*x+V*W*(mu_*mu_)*y),2.0))*((tanTheta*tanTheta)*(x*x)+x*x+1.0/pow(U*U+V*V-(W*W)*(mu_*mu_),2.0)*(sqrt(-(U*U)*(y*y)-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(V*V)*(mu_*mu_)*(y*y)+(W*W)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(y*y)+U*V*x*y*2.0+U*V*(mu_*mu_)*x*y*2.0)+U*W*x+V*W*y+U*W*(mu_*mu_)*x+V*W*(mu_*mu_)*y)*(-sqrt(-(U*U)*(y*y)-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(V*V)*(mu_*mu_)*(y*y)+(W*W)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(y*y)+U*V*x*y*2.0+U*V*(mu_*mu_)*x*y*2.0)+U*W*x+V*W*y+U*W*(mu_*mu_)*x+V*W*(mu_*mu_)*y))*1.0/sqrt(pow(fabs(tanTheta*x),2.0)+pow(fabs(x),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(-sqrt(-(U*U)*(y*y)-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(V*V)*(mu_*mu_)*(y*y)+(W*W)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(y*y)+U*V*x*y*2.0+U*V*(mu_*mu_)*x*y*2.0)+U*W*x+V*W*y+U*W*(mu_*mu_)*x+V*W*(mu_*mu_)*y),2.0)); // newer but y
+	  cos2delta = (1+tantheta*tantheta+K1*K2)/(sqrt(1+tantheta*tantheta+K1*K1)*sqrt(1+tantheta*tantheta+K2*K2));
 	  hppDout (info, "cos(2*delta): " << cos2delta);
 	  *delta = 0.5*acos (cos2delta);
 	  return true;
 	}
 	else { // "vertical" cone
 	  value_type cos2delta = -1.0/sqrt(pow(fabs(tantheta*x),2.0)+pow(fabs(x),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(sqrt(-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(x*x)-(U*U)*(tantheta*tantheta)*(x*x)+U*V*tantheta*(x*x)*2.0+(V*V)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+(W*W)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+U*V*(mu_*mu_)*tantheta*(x*x)*2.0)+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x),2.0))*((tantheta*tantheta)*(x*x)+x*x+1.0/pow(U*U+V*V-(W*W)*(mu_*mu_),2.0)*(sqrt(-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(x*x)-(U*U)*(tantheta*tantheta)*(x*x)+U*V*tantheta*(x*x)*2.0+(V*V)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+(W*W)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+U*V*(mu_*mu_)*tantheta*(x*x)*2.0)+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x)*(-sqrt(-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(x*x)-(U*U)*(tantheta*tantheta)*(x*x)+U*V*tantheta*(x*x)*2.0+(V*V)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+(W*W)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+U*V*(mu_*mu_)*tantheta*(x*x)*2.0)+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x))*1.0/sqrt(pow(fabs(tantheta*x),2.0)+pow(fabs(x),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(-sqrt(-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(x*x)-(U*U)*(tantheta*tantheta)*(x*x)+U*V*tantheta*(x*x)*2.0+(V*V)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+(W*W)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+U*V*(mu_*mu_)*tantheta*(x*x)*2.0)+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x),2.0));
+	  hppDout (info, "cos(2*delta) old: " << cos2delta);
+	  cos2delta = -(1+tantheta*tantheta+K1*K2)/(sqrt(1+tantheta*tantheta+K1*K1)*sqrt(1+tantheta*tantheta+K2*K2));
 	  hppDout (info, "cos(2*delta): " << cos2delta);
 	  *delta = 0.5*acos (cos2delta);
 	  return true;
