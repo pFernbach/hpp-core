@@ -29,6 +29,14 @@ namespace hpp {
   namespace core {
     using model::displayConfig;
 
+    SteeringMethodParabola::SteeringMethodParabola(const ProblemPtr_t& problem):
+      SteeringMethod (problem), device_ (problem-> robot ()),
+      distance_ (WeighedDistance::create (device_.lock ())), weak_ (),
+      g_(9.81), V0max_ (6.2), Vimpmax_ (18), mu_ (0.5), Dalpha_ (0.001),
+      workspaceDim_ (false)
+    {
+    }
+
     PathPtr_t SteeringMethodParabola::impl_compute (ConfigurationIn_t q1,
 						    ConfigurationIn_t q2) 
       const

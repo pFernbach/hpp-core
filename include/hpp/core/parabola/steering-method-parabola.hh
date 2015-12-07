@@ -64,13 +64,7 @@ namespace hpp {
     protected:
       /// Constructor with problem
       /// Robot and weighed distance are created from problem
-      SteeringMethodParabola (const ProblemPtr_t& problem) :
-	SteeringMethod (problem), device_ (problem-> robot ()),
-	distance_ (WeighedDistance::create (device_.lock ())), weak_ (),
-	g_(9.81), V0max_ (12), mu_ (0.5), Dalpha_ (0.001),
-	workspaceDim_ (false)
-	  {
-	  }
+      SteeringMethodParabola (const ProblemPtr_t& problem);
 
       /// Copy constructor
       SteeringMethodParabola (const SteeringMethodParabola& other) :
