@@ -108,10 +108,13 @@ namespace hpp {
       /// return false if constraint can never be respected.
       /// fill alpha_imp_sup/inf angles limiting initial angle
       /// to respect the constraint.
-      bool third_constraint (bool fail,const value_type& X, const value_type& Y,
-			     value_type alpha_imp_min, value_type alpha_imp_max,
+      bool third_constraint (bool fail, const value_type& X,
+			     const value_type& Y,
+			     const value_type alpha_imp_min,
+			     const value_type alpha_imp_max,
 			     value_type *alpha_imp_sup,
-			     value_type *alpha_imp_inf) const;
+			     value_type *alpha_imp_inf,
+			     const value_type n2_angle) const;
 		
       /// Compute fiveth constraint: compute intersection between coneS
       /// and plane_theta. If not empty, compute the two lines and the angle

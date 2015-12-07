@@ -118,8 +118,10 @@ namespace hpp {
       value_type alpha_imp_inf;
       value_type alpha_imp_sup;
 
+      // n2_angle = pi/2 - gamma_imp
       fail = third_constraint (fail, X, Y, alpha_imp_min, alpha_imp_max,
-			       &alpha_imp_sup, &alpha_imp_inf);
+			       &alpha_imp_sup, &alpha_imp_inf,
+			       M_PI/2 - gamma_imp);
       hppDout (info, "alpha_imp_inf: " << alpha_imp_inf);
       hppDout (info, "alpha_imp_sup: " << alpha_imp_sup);
 
@@ -232,14 +234,10 @@ namespace hpp {
 	  return PathPtr_t ();
 	}
       }
-      else { // cone 1 vertical
+      else { // cone 1 "very" vertical
 	delta1 = phi;
       }
       hppDout (info, "delta1: " << delta1);
-      if (delta1 > phi) {
-	hppDout (info, "problem with first cone intersection");
-	return PathPtr_t ();
-      }
 	  
       /* 5th constraint: second cone */
       value_type delta2;
@@ -250,14 +248,10 @@ namespace hpp {
 	  return PathPtr_t ();
 	}
       }
-      else { // cone 1 vertical
+      else { // cone 2 "very" vertical
 	delta2 = phi;
       }
       hppDout (info, "delta2: " << delta2);
-      if (delta2 > phi) {
-	hppDout (info, "problem with second cone intersection");
-	return PathPtr_t ();
-      }
 	  
       /* Definition of gamma_theta angles */
       const value_type n1_angle = atan2(q1 (index+2), cos(theta)*q1 (index) +
@@ -313,14 +307,14 @@ namespace hpp {
       value_type alpha_imp_sup;
       bool fail3 = third_constraint (fail, X_theta, Z, alpha_imp_min,
 				     alpha_imp_max, &alpha_imp_sup,
-				     &alpha_imp_inf);
-      hppDout (info, "alpha_imp_inf: " << alpha_imp_inf);
-      hppDout (info, "alpha_imp_sup: " << alpha_imp_sup);
-
+				     &alpha_imp_inf, n2_angle);
       if (fail3) {
 	hppDout (info, "failed to apply 3rd constraint");
 	return PathPtr_t ();
       }
+
+      hppDout (info, "alpha_imp_inf: " << alpha_imp_inf);
+      hppDout (info, "alpha_imp_sup: " << alpha_imp_sup);
 
       value_type alpha_inf_bound = 0;
       value_type alpha_sup_bound = 0;
@@ -336,7 +330,7 @@ namespace hpp {
 	  alpha_sup_bound = std::min(alpha_0_max,
 				     std::min(alpha_lim_plus,M_PI/2));
 	}
-	else {
+	else { // alpha_imp_sup is worth
 	  alpha_lim_plus = std::min(alpha_lim_plus, alpha_imp_plus);
 	  alpha_sup_bound = std::min(std::min(alpha_0_max, M_PI/2),
 				     std::min(alpha_lim_plus, alpha_imp_sup));
@@ -437,26 +431,31 @@ namespace hpp {
       return fail;
     }
 
-    bool SteeringMethodParabola::third_constraint (bool fail,
-						   const value_type& X,
-						   const value_type& Y,
-						   value_type alpha_imp_min,
-						   value_type alpha_imp_max,
-						   value_type *alpha_imp_sup,
-						   value_type *alpha_imp_inf)
-      const {
+    bool SteeringMethodParabola::third_constraint
+    (bool fail, const value_type& X, const value_type& Y,
+     const value_type alpha_imp_min, const value_type alpha_imp_max,
+     value_type *alpha_imp_sup, value_type *alpha_imp_inf,
+     const value_type n2_angle) const {
       if (fail)
 	return fail;
       else {
 	if (X > 0) {
-	  if (alpha_imp_max > -M_PI/2) {
-	    *alpha_imp_sup = atan(-tan(alpha_imp_min)+2*Y/X);
-	    *alpha_imp_inf = atan(-tan(alpha_imp_max)+2*Y/X);
+	  if (n2_angle > 0) {
+	    if (alpha_imp_max > -M_PI/2) {
+	      *alpha_imp_sup = atan(-tan(alpha_imp_min)+2*Y/X);
+	      *alpha_imp_inf = atan(-tan(alpha_imp_max)+2*Y/X);
+	    } else
+	      fail = 1;
 	  }
-	  else
-	    fail = 1;
+	  else { // n2_angle < 0
+	    if (alpha_imp_min < M_PI/2) {
+	      *alpha_imp_sup = atan(-tan(alpha_imp_min)+2*Y/X);
+	      *alpha_imp_inf = atan(-tan(alpha_imp_max)+2*Y/X);
+	    } else
+	      fail = 1;
+	  }
 	}
-	else { // X < 0
+	else { // X < 0   // TODO: cases n2_angle > 0 or < 0 (2D only)
 	  if (alpha_imp_min < -M_PI/2) {
 	    *alpha_imp_sup = atan(-tan(alpha_imp_min)+2*Y/X) + M_PI;
 	    *alpha_imp_inf = atan(-tan(alpha_imp_max)+2*Y/X) + M_PI;
@@ -498,43 +497,52 @@ namespace hpp {
 	const value_type K1 = (sqrt(discr) + U*W + U*W*mu_*mu_ + V*W*tantheta + V*W*mu_*mu_*tantheta)/denomK;
 	const value_type K2 = (-sqrt(discr) + U*W + U*W*mu_*mu_ + V*W*tantheta + V*W*mu_*mu_*tantheta)/denomK;
 	hppDout (info, "denomK= " << denomK);
-	value_type x = 0.5;
+
 	if (nonVerticalCone) {
-	  // not "vertical" cone
-	  if (U < 0)
-	    x = -0.5;
-	  // non-vertical up (default)
+	  // non-vertical up
 	  hppDout (info, "non-vertical up");
-	  x_minus = x;
-	  x_plus = x;
-	  z_x_minus = x*K2;
-	  z_x_plus = x*K1;
+	  if (U*cos(theta) + V*sin(theta) < 0)
+	    x_minus = -0.5;
+	  else
+	    x_minus = 0.5;
+	  x_plus = x_minus;
+	  z_x_minus = x_minus*K2;
+	  z_x_plus = x_plus*K1;
 
 	  if (psi > M_PI/2) {// down: invert z_plus and z_minus
 	    hppDout (info, "non-vertical down");
-	    z_x_plus = x*K2;
-	    z_x_minus = x*K1;
+	    z_x_plus = x_minus*K2;
+	    z_x_minus = x_plus*K1;
 	  }
 	}
 	else { // "vertical" cone
 	  if (- phi <= psi && psi <=  phi) { // up
 	    hppDout (info, "vertical up");
-	    x_minus = x;
-	    z_x_minus = x*K2;
-	    x = -x;
-	    x_plus = x;
-	    z_x_plus = x*K1;
+	    x_minus = 0.5;
+	    if (denomK < 0) {
+	      x_minus = 0.5;
+	      x_plus = -x_minus;
+	    }
+	    else {
+	      x_minus = -0.5;
+	    x_plus = x_minus;
+	  }
+	    z_x_minus = x_minus*K2;
+	    z_x_plus = x_minus*K1;
 	  }
 	  else { // down
 	    hppDout (info, "vertical down");
-	    x = -0.5;
-	    x_minus = x;
-	    z_x_minus = x*K2;
-	    x = -x;
-	    x_plus = x;
-	    z_x_plus = x*K1;
+	    if (denomK < 0) {
+	      x_minus = -0.5;
+	      x_plus = -x_minus;
+	    }
+	    else {
+	      x_minus = 0.5;
+	      x_plus = x_minus;
+	    }
+	    z_x_minus = x_minus*K2;
+	    z_x_plus = x_plus*K1;
 	  }
-	  x = -x; // revert previous operation
 	}
 
 	// plot outputs
@@ -544,22 +552,23 @@ namespace hpp {
 	hppDout (info, "z_x_plus: " << z_x_plus);
 	hppDout (info, "z_x_minus: " << z_x_minus);
 	
+	value_type cos2delta = (1+tantheta*tantheta+K1*K2)/(sqrt(1+tantheta*tantheta+K1*K1)*sqrt(1+tantheta*tantheta+K2*K2)); // default for non-vertical
+	
 	if (nonVerticalCone) {
 	  // not "vertical" cone
-	  value_type cos2delta = 1.0/sqrt(pow(fabs(tantheta*x),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(sqrt(discr)*x+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x),2.0)+pow(fabs(x),2.0))*1.0/sqrt(pow(fabs(tantheta*x),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(-sqrt(discr)*x+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x),2.0)+pow(fabs(x),2.0))*((tantheta*tantheta)*(x*x)+x*x+1.0/pow(U*U+V*V-(W*W)*(mu_*mu_),2.0)*(sqrt(discr)*x+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x)*(-sqrt(discr)*x+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x));
-	  hppDout (info, "cos(2*delta) old: " << cos2delta);
-	  //1.0/sqrt(pow(fabs(tanTheta*x),2.0)+pow(fabs(x),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(sqrt(-(U*U)*(y*y)-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(V*V)*(mu_*mu_)*(y*y)+(W*W)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(y*y)+U*V*x*y*2.0+U*V*(mu_*mu_)*x*y*2.0)+U*W*x+V*W*y+U*W*(mu_*mu_)*x+V*W*(mu_*mu_)*y),2.0))*((tanTheta*tanTheta)*(x*x)+x*x+1.0/pow(U*U+V*V-(W*W)*(mu_*mu_),2.0)*(sqrt(-(U*U)*(y*y)-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(V*V)*(mu_*mu_)*(y*y)+(W*W)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(y*y)+U*V*x*y*2.0+U*V*(mu_*mu_)*x*y*2.0)+U*W*x+V*W*y+U*W*(mu_*mu_)*x+V*W*(mu_*mu_)*y)*(-sqrt(-(U*U)*(y*y)-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(V*V)*(mu_*mu_)*(y*y)+(W*W)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(y*y)+U*V*x*y*2.0+U*V*(mu_*mu_)*x*y*2.0)+U*W*x+V*W*y+U*W*(mu_*mu_)*x+V*W*(mu_*mu_)*y))*1.0/sqrt(pow(fabs(tanTheta*x),2.0)+pow(fabs(x),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(-sqrt(-(U*U)*(y*y)-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(V*V)*(mu_*mu_)*(y*y)+(W*W)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(y*y)+U*V*x*y*2.0+U*V*(mu_*mu_)*x*y*2.0)+U*W*x+V*W*y+U*W*(mu_*mu_)*x+V*W*(mu_*mu_)*y),2.0)); // newer but y
-	  cos2delta = (1+tantheta*tantheta+K1*K2)/(sqrt(1+tantheta*tantheta+K1*K1)*sqrt(1+tantheta*tantheta+K2*K2));
 	  hppDout (info, "cos(2*delta): " << cos2delta);
 	  *delta = 0.5*acos (cos2delta);
+	  hppDout (info, "delta: " << *delta);
+	  assert (*delta <= phi);
 	  return true;
 	}
 	else { // "vertical" cone
-	  value_type cos2delta = -1.0/sqrt(pow(fabs(tantheta*x),2.0)+pow(fabs(x),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(sqrt(-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(x*x)-(U*U)*(tantheta*tantheta)*(x*x)+U*V*tantheta*(x*x)*2.0+(V*V)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+(W*W)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+U*V*(mu_*mu_)*tantheta*(x*x)*2.0)+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x),2.0))*((tantheta*tantheta)*(x*x)+x*x+1.0/pow(U*U+V*V-(W*W)*(mu_*mu_),2.0)*(sqrt(-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(x*x)-(U*U)*(tantheta*tantheta)*(x*x)+U*V*tantheta*(x*x)*2.0+(V*V)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+(W*W)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+U*V*(mu_*mu_)*tantheta*(x*x)*2.0)+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x)*(-sqrt(-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(x*x)-(U*U)*(tantheta*tantheta)*(x*x)+U*V*tantheta*(x*x)*2.0+(V*V)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+(W*W)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+U*V*(mu_*mu_)*tantheta*(x*x)*2.0)+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x))*1.0/sqrt(pow(fabs(tantheta*x),2.0)+pow(fabs(x),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(-sqrt(-(V*V)*(x*x)+(U*U)*(mu_*mu_)*(x*x)+(W*W)*(mu_*mu_)*(x*x)-(U*U)*(tantheta*tantheta)*(x*x)+U*V*tantheta*(x*x)*2.0+(V*V)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+(W*W)*(mu_*mu_)*(tantheta*tantheta)*(x*x)+U*V*(mu_*mu_)*tantheta*(x*x)*2.0)+U*W*x+U*W*(mu_*mu_)*x+V*W*tantheta*x+V*W*(mu_*mu_)*tantheta*x),2.0));
-	  hppDout (info, "cos(2*delta) old: " << cos2delta);
-	  cos2delta = -(1+tantheta*tantheta+K1*K2)/(sqrt(1+tantheta*tantheta+K1*K1)*sqrt(1+tantheta*tantheta+K2*K2));
+	  if (denomK < 0)
+	    cos2delta = -cos2delta;
 	  hppDout (info, "cos(2*delta): " << cos2delta);
 	  *delta = 0.5*acos (cos2delta);
+	  hppDout (info, "delta: " << *delta);
+	  assert (*delta <= phi); //problem with cone intersection
 	  return true;
 	}
       }
