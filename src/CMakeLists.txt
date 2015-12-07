@@ -75,6 +75,7 @@ SET(${LIBRARY_NAME}_SOURCES
   parabola/steering-method-parabola.cc
   parabola/parabola-planner.cc
   contact-configuration-shooter.cc
+  configuration-projection-shooter.cc
   )
 
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src)
