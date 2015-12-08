@@ -92,13 +92,13 @@ namespace hpp {
 	hppDout (info, "create config projection shooter");
 	configurationShooter (ConfigurationProjectionShooter::create
 			      (problem.robot (), problem, 0.02));
-      }/*
-      /*hppDout (info, "create contact config shooter");
+			      }*/
+      hppDout (info, "create contact config shooter");
 	configurationShooter (ContactConfigurationShooter::create
-	(problem.robot (), problem));*/
-      hppDout (info, "create config projection shooter");
+	(problem.robot (), problem));
+      /*hppDout (info, "create config projection shooter");
       configurationShooter (ConfigurationProjectionShooter::create
-			    (problem.robot (), problem, 0.02));
+      (problem.robot (), problem, 0.01));*/
     }
 
     void ParabolaPlanner::init (const ParabolaPlannerWkPtr_t& weak)
@@ -119,7 +119,7 @@ namespace hpp {
       PathPtr_t validPath, validPart, localPath;
       ValidationReportPtr_t validationReport;
       PathValidationReportPtr_t report;
-      bool fwdEdgeExists, bwdEdgeExists, validConfig;
+      bool validConfig;
       DelayedEdge_t fwdDelayedEdge, bwdDelayedEdge;
       DelayedEdges_t fwdDelayedEdges, bwdDelayedEdges;
       /*const size_type index = robot->configSize()
@@ -165,12 +165,8 @@ namespace hpp {
 	     roadmap ()->connectedComponents ().begin ();
 	   itcc != roadmap ()->connectedComponents ().end (); ++itcc) {
 	ConnectedComponentPtr_t cc = *itcc;
-	fwdEdgeExists = false;
-	bwdEdgeExists = false;
 	// except its own connected component of course
 	if (cc != impactNode->connectedComponent ()) {
-	  value_type lengthFwd = std::numeric_limits <value_type>::infinity ();
-	  value_type lengthBwd = std::numeric_limits <value_type>::infinity ();
 
 	  // iteration on each node of the current connected-component
 	  for (Nodes_t::const_iterator n_it = cc->nodes ().begin (); 

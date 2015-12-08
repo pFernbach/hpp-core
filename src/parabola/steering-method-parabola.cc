@@ -32,7 +32,8 @@ namespace hpp {
     SteeringMethodParabola::SteeringMethodParabola(const ProblemPtr_t& problem):
       SteeringMethod (problem), device_ (problem-> robot ()),
       distance_ (WeighedDistance::create (device_.lock ())), weak_ (),
-      g_(9.81), V0max_ (6.2), Vimpmax_ (18), mu_ (0.5), Dalpha_ (0.001),
+      g_(9.81), V0max_ (6), Vimpmax_ (18), mu_ (1.2), Dalpha_ (0.001),
+
       workspaceDim_ (false)
     {
     }
@@ -370,8 +371,8 @@ namespace hpp {
       }
 
       /* Select alpha_0 */
-      value_type alpha = alpha_inf_bound; //debug
-      //value_type alpha = 0.5*(alpha_inf_bound + alpha_sup_bound); // better
+      //value_type alpha = alpha_inf_bound; //debug
+      value_type alpha = 0.5*(alpha_inf_bound + alpha_sup_bound); // better
       hppDout (info, "alpha: " << alpha);
       
       /* Compute Parabola initial and final velocities */
@@ -567,7 +568,7 @@ namespace hpp {
 	  hppDout (info, "cos(2*delta): " << cos2delta);
 	  *delta = 0.5*acos (cos2delta);
 	  hppDout (info, "delta: " << *delta);
-	  assert (*delta <= phi);
+	  assert (*delta <= phi + 1e-5);
 	  return true;
 	}
 	else { // "vertical" cone
@@ -576,7 +577,7 @@ namespace hpp {
 	  hppDout (info, "cos(2*delta): " << cos2delta);
 	  *delta = 0.5*acos (cos2delta);
 	  hppDout (info, "delta: " << *delta);
-	  assert (*delta <= phi); //problem with cone intersection
+	  assert (*delta <= phi + 1e-5); //problem with cone intersection
 	  return true;
 	}
       }

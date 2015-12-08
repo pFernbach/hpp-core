@@ -190,7 +190,7 @@ namespace hpp {
 		  //hppDout (info, "lastDirection: " << lastDirection);
 		  Translate(config, -lastDirection * 
 			    (std::abs(report.result.getContact (0).
-				      penetration_depth) +0.03));
+				      penetration_depth) +0.01));
 		  //hppDout (info, "config (after translate): " << displayConfig (*config));
 		  limitDis--;
 		}
@@ -209,7 +209,7 @@ namespace hpp {
       //if (!found) hppDout (info, "no config found by shooter");
       //hppDout (info, "config (before setOrien): " << displayConfig (*config));
 
-      *config = setOrientation (robot_, *config);
+      //*config = setOrientation (robot_, *config); DONE WHEN PATH FOUND
       //hppDout (info, "config: " << displayConfig (*config));
       //}
       // orientation may break validity
