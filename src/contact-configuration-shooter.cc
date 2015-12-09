@@ -143,6 +143,8 @@ namespace hpp {
       JointVector_t jv = robot_->getJointVector ();
       ConfigurationPtr_t config (new Configuration_t (robot_->configSize ()));
       std::size_t limit = shootLimit_;
+      const size_type extraDim = robot_->extraConfigSpace ().dimension ();
+      const size_type index = robot_->configSize () - extraDim;
 
       bool found(false);
       //do {
@@ -171,7 +173,7 @@ namespace hpp {
 	  // no obstacle is reachable
 	  CollisionValidationReport report;
 	  std::size_t limitDis = displacementLimit_;
-	  Vec3f lastDirection(1,0,0);
+	  Vec3f lastDirection(0,0,1);
 	  while(!found && limitDis >0)
 	    {
 	      if(validator_->validate(*config, report))
@@ -187,7 +189,10 @@ namespace hpp {
 		  //get normal from collision tri
 		  lastDirection = triangles_
 		    [report.result.getContact(0).b2].first;
-		  //hppDout (info, "lastDirection: " << lastDirection);
+		  
+		  for (size_type i=0; i<3; ++i)
+		    (*config) [index + i] = -lastDirection [i];
+		  *config = setOrientation (robot_, *config);
 		  Translate(config, -lastDirection * 
 			    (std::abs(report.result.getContact (0).
 				      penetration_depth) +0.01));
@@ -196,21 +201,13 @@ namespace hpp {
 		}
 	    }
       
-	  //hppDout (info, "surface normal: " << -lastDirection);
 	  // Set extra configuration variables as the surface DIRECTION
-	  const size_type extraDim = robot_->extraConfigSpace ().dimension ();
-	  const size_type offset = robot_->configSize () - extraDim;
-	  for (size_type i=0; i<extraDim; ++i)
-	    {
-	      (*config) [offset + i] = -lastDirection [i];
-	    }
+	  // now done in while to update orientation
+	  
 	  limit--;
 	}
       //if (!found) hppDout (info, "no config found by shooter");
-      //hppDout (info, "config (before setOrien): " << displayConfig (*config));
 
-      //*config = setOrientation (robot_, *config); DONE WHEN PATH FOUND
-      //hppDout (info, "config: " << displayConfig (*config));
       //}
       // orientation may break validity
       //while (!validator_->validate(*config, report));

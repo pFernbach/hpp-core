@@ -89,6 +89,8 @@ namespace hpp {
       CollisionObjectPtr_t nearestObst;
       DistanceBetweenObjectsPtr_t distanceBetweenObjects
 	(problem_.distanceBetweenObjects ());
+      ConfigValidationsPtr_t configValidations (problem_.configValidations());
+      ValidationReportPtr_t validationReport;
 
       // Step 1: get nearest obstacle and surface-normale at config q
       robot_->currentConfiguration (q);
@@ -118,6 +120,8 @@ namespace hpp {
       if (ecsDim != 2)
 	qout (index + 2) = n [2];
       qout = setOrientation (robot_, qout);
+      if (!configValidations->validate (qout, validationReport))
+	return qout; // thrown by planner
 
       // Step 3: re-compute new distance to nearestObst
       CollisionObjectPtr_t robotBody = dr.begin()->innerObject;
