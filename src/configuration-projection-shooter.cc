@@ -17,7 +17,8 @@
 // <http://www.gnu.org/licenses/>.
 
 # include <sstream>
-#include <hpp/util/debug.hh>
+# include <hpp/util/debug.hh>
+# include <hpp/model/collision-object.hh>
 # include <hpp/model/configuration.hh>
 # include <hpp/model/device.hh>
 # include <hpp/model/joint.hh>
@@ -27,6 +28,7 @@
 # include <hpp/core/config-validations.hh>
 # include <hpp/core/distance-between-objects.hh>
 # include <hpp/core/problem.hh>
+#include <hpp/core/parabola/parabola-library.hh>
 # include <fcl/distance.h>
 
 namespace hpp {
@@ -38,16 +40,14 @@ namespace hpp {
 	ConfigValidationsPtr_t configValidations (problem_.configValidations());
 	ValidationReportPtr_t validationReport;
 	ConfigurationPtr_t config (new Configuration_t (robot_->configSize ()));
-	// while config in collision, resample config
+	// Sample a collision-free configuration
 	do {
 	  *config = uniformlySample ();
 	}
 	while (!configValidations->validate (*config, validationReport));
-	//hppDout (info, "coll-free config: " << displayConfig (*config));
 
-	/* Project on nearest obstacle and shift away*/
+	// Project on nearest obstacle and shift away
 	*config = project (*config);
-	//hppDout (info, "config: " << displayConfig (*config));
 	return config;
       }
 
@@ -78,72 +78,70 @@ namespace hpp {
 	return q;
       }
 
-      Configuration_t ConfigurationProjectionShooter::project
-	(const Configuration_t q) const {
-	Configuration_t qout = q;
-	fcl::Vec3f pi, pj, dir; // fcl nearest points of collision pairs
-	value_type minDistance = std::numeric_limits <value_type>::infinity();
-	value_type distance = minDistance;
+    Configuration_t ConfigurationProjectionShooter::project
+    (const Configuration_t q) const {
+      Configuration_t qout = q;
+      const size_type ecsDim = robot_->extraConfigSpace ().dimension ();
+      const size_type index = robot_->configSize() - ecsDim; // ecs index
+      fcl::Vec3f pi, pj, dir, n; // fcl nearest points of collision pairs
+      value_type minDistance = std::numeric_limits <value_type>::infinity();
+      value_type distance = minDistance;
+      CollisionObjectPtr_t nearestObst;
+      DistanceBetweenObjectsPtr_t distanceBetweenObjects
+	(problem_.distanceBetweenObjects ());
 
-	DistanceBetweenObjectsPtr_t distanceBetweenObjects
-	  (problem_.distanceBetweenObjects ());
-	robot_->currentConfiguration (q);
-	hppDout (info, "q: " << displayConfig (q));
-	robot_->computeForwardKinematics ();
-	distanceBetweenObjects->computeDistances (); // only outers !
-	const model::DistanceResults_t& dr =
-	  distanceBetweenObjects->distanceResults ();
+      // Step 1: get nearest obstacle and surface-normale at config q
+      robot_->currentConfiguration (q);
+      robot_->computeForwardKinematics ();
+      distanceBetweenObjects->computeDistances (); // only outers !
+      const model::DistanceResults_t& dr =
+	distanceBetweenObjects->distanceResults ();
 
-	for (model::DistanceResults_t::const_iterator itDistance = 
-	       dr.begin (); itDistance != dr.end (); itDistance++) {
-	  distance = itDistance->distance ();
-	  if (distance < minDistance){
-	    minDistance = distance;
-	    pi = itDistance->closestPointInner (); // point Body
-	    pj = itDistance->closestPointOuter (); // point Obst
-	    dir = pi - pj; // obstacle normale direction
-	  }
+      for (model::DistanceResults_t::const_iterator itDistance = 
+	     dr.begin (); itDistance != dr.end (); itDistance++) {
+	distance = itDistance->distance ();
+	if (distance < minDistance){
+	  minDistance = distance;
+	  nearestObst = itDistance->outerObject;
+	  pi = itDistance->closestPointInner (); // point Body
+	  pj = itDistance->closestPointOuter (); // point Obst
+	  dir = pi - pj; // obstacle normale direction
 	}
-	hppDout (info, "minDistance: " << minDistance);
-	hppDout (info, "pi: " << pi);
-	hppDout (info, "pj: " << pj);
-	hppDout (info, "dir: " << dir);
-
-	const value_type dir_norm = sqrt (dir [0]*dir [0] + dir [1]*dir [1]
-					  + dir [2]*dir [2]);
-	const size_type index = robot_->configSize()
-	  - robot_->extraConfigSpace ().dimension (); // ecs index
-	const size_type ecsDim = robot_->extraConfigSpace ().dimension ();
-	
-	if (ecsDim == 2) { /* 2D gamma and projection*/
-	  qout (0) -= dir [0]; // x part
-	  qout (1) -= dir [1]; // y part
-	  qout (index) = dir [0]/dir_norm;
-	  qout (index+1) = dir [1]/dir_norm;
-	}
-	else { /* 3D gamma and projection*/
-	  qout (0) -= dir [0]; // x part
-	  qout (1) -= dir [1]; // y part
-	  qout (2) -= dir [2]; // z part
-	  qout (index) = dir [0]/dir_norm;
-	  qout (index+1) = dir [1]/dir_norm;
-	  qout (index+2) = dir [2]/dir_norm;
-	}
-	hppDout (info, "qout: " << displayConfig (qout));
-	
-	/* Shift robot away from the contact */
-	if (ecsDim == 2) { /* 2D */
-	  const value_type gamma = atan2(q (3), q (2)) - M_PI/2;
-	  qout (0) -= shiftDistance_*sin(gamma); // x part
-	  qout (1) += shiftDistance_*cos(gamma); // y part
-	}
-	else { /* 3D */
-	  qout (0) += shiftDistance_ * qout (index); // x part
-	  qout (1) += shiftDistance_ * qout (index + 1); // y part
-	  qout (2) += shiftDistance_ * qout (index + 2); // z part
-	}
-	return qout;
       }
+      const value_type dir_norm = sqrt (dir [0]*dir [0] + dir [1]*dir [1]
+					+ dir [2]*dir [2]);
+      n = dir/dir_norm;
+
+      // Step 2: set orientation with n
+      qout (index) = n [0];
+      qout (index + 1) = n [1];
+      if (ecsDim != 2)
+	qout (index + 2) = n [2];
+      qout = setOrientation (robot_, qout);
+
+      // Step 3: re-compute new distance to nearestObst
+      CollisionObjectPtr_t robotBody = dr.begin()->innerObject;
+      fcl::DistanceRequest distanceRequest (true, 0, 0, fcl::GST_INDEP);
+      model::DistanceResult dr1;
+      robot_->currentConfiguration (qout);
+      robot_->computeForwardKinematics (); // may not be necessary
+      fcl::distance (robotBody->fcl ().get (), nearestObst->fcl ().get (),
+		     distanceRequest, dr1.fcl);
+      const value_type dist = dr1.distance ();
+
+      // Step 4: project and shift
+      if (ecsDim == 2) { /* 2D*/
+	const value_type gamma = atan2(q (3), q (2)) - M_PI/2;
+	qout (0) -= dir [0] + shiftDistance_*sin(gamma); // x
+	qout (1) -= dir [1] - shiftDistance_*cos(gamma); // y
+      }
+      else { /* 3D */
+	qout (0) += - dist * n [0] + shiftDistance_ * n [0]; // x
+	qout (1) += - dist * n [1] + shiftDistance_ * n [1]; // y
+	qout (2) += - dist * n [2] + shiftDistance_ * n [2]; // z
+      }
+      return qout;
+    }
     /// \}
   } //   namespace core
 } // namespace hpp
