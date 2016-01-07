@@ -32,8 +32,7 @@ namespace hpp {
     SteeringMethodParabola::SteeringMethodParabola(const ProblemPtr_t& problem):
       SteeringMethod (problem), device_ (problem-> robot ()),
       distance_ (WeighedDistance::create (device_.lock ())), weak_ (),
-      g_(9.81), V0max_ (6), Vimpmax_ (18), mu_ (1.2), Dalpha_ (0.001),
-
+      g_(9.81), V0max_ (6.5), Vimpmax_ (15), mu_ (0.5), Dalpha_ (0.001),
       workspaceDim_ (false)
     {
     }
@@ -534,10 +533,10 @@ namespace hpp {
 	    }
 	    else {
 	      x_minus = -0.5;
-	    x_plus = x_minus;
-	  }
+	      x_plus = x_minus;
+	    }
 	    z_x_minus = x_minus*K2;
-	    z_x_plus = x_minus*K1;
+	    z_x_plus = x_plus*K1;
 	  }
 	  else { // down
 	    hppDout (info, "vertical down");

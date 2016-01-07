@@ -80,15 +80,6 @@ namespace hpp {
 	//hppDout (info, "x: " << result (0));
 	//hppDout (info, "f(x) = " << result (1));
 
-	/* if robot has more than 2 DoF (x-y translation)
-	   NOT ADAPTED TO QUATERNION*/
-	if (nbConfig > dirDim * 2) { 
-	  for (size_type i=dirDim; i<nbConfig-dirDim; i++)
-	    {
-	      result (i) = 0;
-	    }
-	}
-
 	result (nbConfig-dirDim) = (1 - u)
 	  * initial_(nbConfig-dirDim) + u*end_(nbConfig-dirDim);
 	result (nbConfig-dirDim+1) = (1 - u)
@@ -100,38 +91,51 @@ namespace hpp {
 	const value_type theta = coefficients_(3);
 	const value_type x_theta = cos(theta)*result (0) +
 	  sin(theta)*result (1);
+	const value_type x_theta_max = - 0.5 *
+	  coefficients_ (1) / coefficients_ (0);
+	const value_type x_theta_initial = cos(theta)*initial_ (0) +
+	  sin(theta)*initial_ (1);
+	const value_type x_theta_end = cos(theta)*end_ (0) +
+	  sin(theta)*end_ (1);
+	const value_type u_max = (x_theta_max - x_theta_initial)
+	  / (x_theta_end - x_theta_initial);
 
 	result (2) = coefficients_(0)*x_theta*x_theta
 	  + coefficients_(1)*x_theta + coefficients_(2);
 
-	/*hppDout (info, "x_theta: " << x_theta);
-	  hppDout (info, "x: " << result (0));
-	  hppDout (info, "y: " << result (1));
-	  hppDout (info, "z: " << result (2));*/
-
-	/* if robot has more than 3 DoF (x-y-z translation)
-	   specially for freeflyer, the rotation part will be set to 0 
-	   NOT ADAPTED TO QUATERNION
-	   if (nbConfig > dirDim * 2) {
-	   for (size_type i=dirDim; i<nbConfig-dirDim; i++)
-	   {
-	   result (i) = 0;
-	   }
-	   }*/
-	
 	/* Quaternions interpolation */
-	JointPtr_t SO3joint = device_->getJointByName ("base_joint_SO3");
-	std::size_t rank = SO3joint->rankInConfiguration ();
+	const JointPtr_t SO3joint = device_->getJointByName ("base_joint_SO3");
+	const std::size_t rank = SO3joint->rankInConfiguration ();
+	const size_type dimSO3 = SO3joint->configSize ();
 	SO3joint->configuration ()->interpolate
 	  (initial_, end_, u, rank, result);
 
+	/* if robot has internal DoF (except freeflyer ones) */
+	// translation dimension of freeflyer hardcoded...
+	// min value (to reach for u = u_max) hardcoded...
+	// manual interpolation since joint not available with index...
+	const value_type maxVal = 0; // because here initial_ = end_ ...
+	if (nbConfig > dirDim + 3 + dimSO3) {
+	  for (size_type i = 7; i<nbConfig-dirDim; i++)
+	    {
+	      if (u <= u_max) {
+		const value_type u_prime = u / u_max;
+		result (i) = (1 - u_prime) * initial_ (i) + u_prime * maxVal;
+	      }
+	      else {
+		const value_type u_prime = (u - u_max) / (1 - u_max);
+		result (i) = (1 - u_prime) * maxVal + u_prime * end_ (i);
+	      }
+	    }
+	}
+
 	/* Normal vector interpolation
-	result (nbConfig-dirDim) = (1 - u) *
-	  initial_(nbConfig-dirDim) + u*end_(nbConfig-dirDim);
-	result (nbConfig-dirDim+1) = (1 - u) *
-	  initial_(nbConfig-dirDim+1) + u*end_(nbConfig-dirDim+1);
-	result (nbConfig-dirDim+2) = (1 - u) *
-	  initial_(nbConfig-dirDim+2) + u*end_(nbConfig-dirDim+2);*/
+	   result (nbConfig-dirDim) = (1 - u) *
+	   initial_(nbConfig-dirDim) + u*end_(nbConfig-dirDim);
+	   result (nbConfig-dirDim+1) = (1 - u) *
+	   initial_(nbConfig-dirDim+1) + u*end_(nbConfig-dirDim+1);
+	   result (nbConfig-dirDim+2) = (1 - u) *
+	   initial_(nbConfig-dirDim+2) + u*end_(nbConfig-dirDim+2);*/
       }
       return true;
     }

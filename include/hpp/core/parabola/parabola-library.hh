@@ -33,7 +33,7 @@ namespace hpp {
     inline Configuration_t setOrientation
     (const DevicePtr_t& robot, const Configuration_t& q) {
       Configuration_t qtest = q;
-      hppDout (info, "q: " << displayConfig (q));
+      //hppDout (info, "q: " << displayConfig (q));
       const JointPtr_t jointSO3 = robot->getJointVector () [1];
       const size_type indexSO3 = jointSO3->rankInConfiguration ();
       const size_type index = robot->configSize ()
@@ -44,7 +44,7 @@ namespace hpp {
       const value_type nz = q [index + 2];
       //const value_type theta = atan2 (2*qw*qz - 2*qx*qy, 1-2*qy*qy-2*qz*qz);
       const value_type theta = q [index + 3];
-      hppDout (info, "theta: " << theta);
+      //hppDout (info, "theta: " << theta);
 
       const int sign = -(theta > M_PI/2) - (theta < -M_PI/2) +
 	(int) ((theta > -M_PI/2) && (theta < M_PI/2));
@@ -90,18 +90,18 @@ namespace hpp {
       A (0,0) = x12; A (0,1) = yz; A (0,2) = nx;
       A (1,0) = y12; A (1,1) = zx; A (1,2) = ny;
       A (2,0) = z12; A (2,1) = xy; A (2,2) = nz;
-      hppDout (info, "A: " << A);
+      //hppDout (info, "A: " << A);
       //hppDout (info, "A.determinant (): " << A.determinant ());
 
       fcl::Quaternion3f quat;
       quat.fromRotation (A);
-      hppDout (info, "quat: " << quat);
+      //hppDout (info, "quat: " << quat);
 	
       qtest [indexSO3] = quat [0];
       qtest [indexSO3 + 1] = quat [1];
       qtest [indexSO3 + 2] = quat [2];
       qtest [indexSO3 + 3] = quat [3];
-      hppDout (info, "qtest: " << displayConfig (qtest));
+      //hppDout (info, "qtest: " << displayConfig (qtest));
       return qtest;
     }
   } //   namespace core

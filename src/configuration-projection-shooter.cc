@@ -86,7 +86,7 @@ namespace hpp {
       fcl::Vec3f pi, pj, dir, n; // fcl nearest points of collision pairs
       value_type minDistance = std::numeric_limits <value_type>::infinity();
       value_type distance = minDistance;
-      CollisionObjectPtr_t nearestObst;
+      CollisionObjectPtr_t nearestRob, nearestObst;
       DistanceBetweenObjectsPtr_t distanceBetweenObjects
 	(problem_.distanceBetweenObjects ());
       ConfigValidationsPtr_t configValidations (problem_.configValidations());
@@ -104,6 +104,7 @@ namespace hpp {
 	distance = itDistance->distance ();
 	if (distance < minDistance){
 	  minDistance = distance;
+	  nearestRob = itDistance->innerObject;
 	  nearestObst = itDistance->outerObject;
 	  pi = itDistance->closestPointInner (); // point Body
 	  pj = itDistance->closestPointOuter (); // point Obst
@@ -124,12 +125,11 @@ namespace hpp {
 	return qout; // thrown by planner
 
       // Step 3: re-compute new distance to nearestObst
-      CollisionObjectPtr_t robotBody = dr.begin()->innerObject;
       fcl::DistanceRequest distanceRequest (true, 0, 0, fcl::GST_INDEP);
       model::DistanceResult dr1;
       robot_->currentConfiguration (qout);
       robot_->computeForwardKinematics (); // may not be necessary
-      fcl::distance (robotBody->fcl ().get (), nearestObst->fcl ().get (),
+      fcl::distance (nearestRob->fcl ().get (), nearestObst->fcl ().get (),
 		     distanceRequest, dr1.fcl);
       const value_type dist = dr1.distance ();
 

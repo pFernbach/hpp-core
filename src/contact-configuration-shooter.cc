@@ -195,7 +195,7 @@ namespace hpp {
 		  *config = setOrientation (robot_, *config);
 		  Translate(config, -lastDirection * 
 			    (std::abs(report.result.getContact (0).
-				      penetration_depth) +0.01));
+				      penetration_depth) +0.005));
 		  //hppDout (info, "config (after translate): " << displayConfig (*config));
 		  limitDis--;
 		}
