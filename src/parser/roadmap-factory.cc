@@ -227,7 +227,7 @@ namespace hpp {
             }
             of->addAttribute ("from", boost::lexical_cast <std::string> (fromId));
             of->addAttribute ("to", boost::lexical_cast <std::string> (toId));
-            of->addAttribute ("constraint", (*ed)->path()->constraints()->name());
+            //of->addAttribute ("constraint", (*ed)->path()->constraints()->name());
           }
           fromId++;
         }

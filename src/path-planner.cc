@@ -75,6 +75,9 @@ namespace hpp {
 
     PathVectorPtr_t PathPlanner::solve ()
     {
+      /*value_type timmy = time (NULL);
+      srand (timmy);
+      hppDout (info, "time (NULL)= " << std::setprecision (15) << timmy);*/
       interrupt_ = false;
       bool solved = false;
       startSolve ();

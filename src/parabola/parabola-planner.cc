@@ -82,23 +82,23 @@ namespace hpp {
 	}
       } 
       else
-	noContactShooter = true;
+      noContactShooter = true;
       if (!noContactShooter) {
-	hppDout (info, "create contact config shooter");
-	configurationShooter (ContactConfigurationShooter::create
-			      (problem.robot (), problem));
+      hppDout (info, "create contact config shooter");
+      configurationShooter (ContactConfigurationShooter::create
+      (problem.robot (), problem));
       }
       else {
-	hppDout (info, "create config projection shooter");
-	configurationShooter (ConfigurationProjectionShooter::create
-			      (problem.robot (), problem, 0.02));
-			      }*/
-      hppDout (info, "create contact config shooter");
-	configurationShooter (ContactConfigurationShooter::create
-	(problem.robot (), problem));
-      /*hppDout (info, "create config projection shooter");
+      hppDout (info, "create config projection shooter");
       configurationShooter (ConfigurationProjectionShooter::create
-      (problem.robot (), problem, 0.01));*/
+      (problem.robot (), problem, 0.02));
+      }*/
+      /*hppDout (info, "create contact config shooter");
+	configurationShooter (ContactConfigurationShooter::create
+	(problem.robot (), problem));*/
+      hppDout (info, "create config projection shooter");
+      configurationShooter (ConfigurationProjectionShooter::create
+			    (problem.robot (), problem, 0.001));
     }
 
     void ParabolaPlanner::init (const ParabolaPlannerWkPtr_t& weak)

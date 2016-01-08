@@ -606,8 +606,11 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
       }
       
       // update waypoints orientations
+      //const JointPtr_t legJoint = robot_->getJointByName ("j_mobile_leg");
+      //const std::size_t rank = legJoint->rankInConfiguration ();
       for (std::size_t i = 0; i < waypoints.size (); i++) {
 	waypoints [i] = setOrientation (robot_, waypoints [i]);
+	//waypoints [i][rank] = legJoint->lowerBound (0);
 	hppDout (info, "new wp(i): " << displayConfig (waypoints [i]));
       }
 
