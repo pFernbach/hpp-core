@@ -42,6 +42,7 @@
 #include <hpp/core/basic-configuration-shooter.hh>
 #include <hpp/core/parabola-planner.hh>
 #include <hpp/core/parabola/parabola-path.hh>
+#include <hpp/core/parabola/steering-method-parabola.hh>
 #include <hpp/core/contact-configuration-shooter.hh>
 #include <hpp/core/parabola/parabola-library.hh>
 
@@ -87,7 +88,8 @@ namespace hpp {
       pathPlannerType_ ("ParabolaPlanner"),
       initConf_ (), goalConfigurations_ (),
       configurationShooterType_ ("BasicConfigurationShooter"),
-      steeringMethodType_ ("SteeringMethodStraight"),
+      //steeringMethodType_ ("SteeringMethodStraight"),
+      steeringMethodType_ ("SteeringMethodParabola"),
       pathOptimizerTypes_ (), pathOptimizers_ (),
       pathValidationType_ ("Discretized"), pathValidationTolerance_ (0.05),
       collisionObstacles_ (), distanceObstacles_ (), obstacleMap_ (),
@@ -104,6 +106,10 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
       add <SteeringMethodBuilder_t> ("SteeringMethodStraight", boost::bind(
             static_cast<SteeringMethodStraightPtr_t (*)(const ProblemPtr_t&)>
               (&SteeringMethodStraight::create), _1
+            ));
+      add <SteeringMethodBuilder_t> ("SteeringMethodParabola", boost::bind(
+            static_cast<SteeringMethodParabolaPtr_t (*)(const ProblemPtr_t&)>
+              (&SteeringMethodParabola::create), _1
             ));
 
       // Store path optimization methods in map.
