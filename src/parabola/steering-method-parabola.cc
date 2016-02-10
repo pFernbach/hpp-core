@@ -30,17 +30,20 @@ namespace hpp {
     using model::displayConfig;
 
     SteeringMethodParabola::SteeringMethodParabola(const ProblemPtr_t& problem):
-      SteeringMethod (problem), device_ (problem-> robot ()),
+      SteeringMethod (problem), problem_ (problem),
+      device_ (problem-> robot ()),
       distance_ (WeighedDistance::create (device_.lock ())), weak_ (),
-      g_(9.81), V0max_ (6.5), Vimpmax_ (15), mu_ (0.5), Dalpha_ (0.001),
-      workspaceDim_ (false)
+      g_(9.81), V0max_ (problem->vmax_), Vimpmax_ (problem->vmax_),
+      mu_ (problem->mu_), Dalpha_ (0.001), workspaceDim_ (false)
     {
     }
 
     PathPtr_t SteeringMethodParabola::impl_compute (ConfigurationIn_t q1,
-						    ConfigurationIn_t q2) 
-      const
+						    ConfigurationIn_t q2) const
     {
+      V0max_ = problem_->vmax_; // may have changed
+      Vimpmax_ = problem_->vmax_;
+      mu_ = problem_->mu_;
       hppDout (info, "q_init: " << displayConfig (q1));
       hppDout (info, "q_goal: " << displayConfig (q2));
       hppDout (info, "g_: " << g_ << " , mu_: " << mu_ << " , V0max: " <<

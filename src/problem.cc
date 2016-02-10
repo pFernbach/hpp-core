@@ -48,7 +48,8 @@ namespace hpp {
       pathValidation_ (DiscretizedCollisionChecking::create
 		       (robot, 0.05)),
       collisionObstacles_ (), constraints_ (),
-      configurationShooter_(BasicConfigurationShooter::create (robot))
+      configurationShooter_(BasicConfigurationShooter::create (robot)),
+      vmax_ (8), mu_ (1.2)
     {
       configValidations_->add (CollisionValidation::create (robot));
       configValidations_->add (JointBoundValidation::create (robot));

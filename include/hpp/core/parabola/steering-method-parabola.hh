@@ -137,13 +137,14 @@ namespace hpp {
       /// Function equivalent to sqrt( 1 + y0_dot/x0_dot + fz'(x)^2 ) in 3D
       value_type lengthFunction (const value_type x,const vector_t coefs) const;
 
+      ProblemPtr_t problem_;
       DeviceWkPtr_t device_;
       WeighedDistancePtr_t distance_;
       SteeringMethodParabolaWkPtr_t weak_;
       value_type g_; // gravity constant
-      value_type V0max_; // maximal initial velocity
-      value_type Vimpmax_; // maximal landing velocity
-      value_type mu_; // friction coefficient
+      mutable value_type V0max_; // maximal initial velocity
+      mutable value_type Vimpmax_; // maximal landing velocity
+      mutable value_type mu_; // friction coefficient
       value_type Dalpha_; // alpha increment
       mutable bool workspaceDim_; // true for 3D, false for 2D
     }; // SteeringMethodParabola

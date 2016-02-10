@@ -214,6 +214,12 @@ namespace hpp {
 	distanceBetweenObjects_ = dbo;
       }
 
+      /// Set maximal velocity limitation of Parabola Steering Method
+      mutable value_type vmax_;
+      
+      /// Set tangent friction coefficient of Parabola Steering Method
+      mutable value_type mu_;
+
     private :
       /// The robot
       DevicePtr_t robot_;
