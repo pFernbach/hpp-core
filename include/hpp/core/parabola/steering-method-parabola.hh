@@ -68,10 +68,11 @@ namespace hpp {
 
       /// Copy constructor
       SteeringMethodParabola (const SteeringMethodParabola& other) :
-	SteeringMethod (other), device_ (other.device_),
+	SteeringMethod (other),
+	problem_ (other.problem_), device_ (other.device_),
 	distance_ (other.distance_), weak_ (), g_(other.g_),
 	V0max_ (other.V0max_), Vimpmax_ (other.Vimpmax_),mu_ (other.mu_),
-	Dalpha_ (other.Dalpha_), workspaceDim_ (other.workspaceDim_)
+	Dalpha_ (other.Dalpha_)
 	{
 	}
 
@@ -82,10 +83,6 @@ namespace hpp {
 	weak_ = weak;
       }
     private:
-      /// 2D impl_compute
-      PathPtr_t compute_2D_path (ConfigurationIn_t q1,
-				 ConfigurationIn_t q2) const;
-
       /// 3D impl_compute
       PathPtr_t compute_3D_path (ConfigurationIn_t q1,
 				 ConfigurationIn_t q2) const;
@@ -146,7 +143,6 @@ namespace hpp {
       mutable value_type Vimpmax_; // maximal landing velocity
       mutable value_type mu_; // friction coefficient
       value_type Dalpha_; // alpha increment
-      mutable bool workspaceDim_; // true for 3D, false for 2D
     }; // SteeringMethodParabola
     /// \}
   } // namespace core

@@ -30,6 +30,8 @@
 #include <hpp/core/continuous-collision-checking/dichotomy.hh>
 #include <hpp/core/continuous-collision-checking/progressive.hh>
 #include <hpp/core/basic-configuration-shooter.hh>
+#include <hpp/core/configuration-projection-shooter.hh>
+#include <hpp/core/contact-configuration-shooter.hh>
 #include <hpp/core/parabola/steering-method-parabola.hh>
 
 
@@ -39,6 +41,7 @@ namespace hpp {
     // ======================================================================
 
     Problem::Problem (DevicePtr_t robot) :
+      shiftDistance_ (0.001), vmax_ (7), mu_ (1.2),
       robot_ (robot),
       distance_ (WeighedDistance::create (robot)),
       initConf_ (), goalConfigurations_ (),
@@ -46,10 +49,11 @@ namespace hpp {
       steeringMethod_ (SteeringMethodParabola::create (this)),
       configValidations_ (ConfigValidations::create ()),
       pathValidation_ (DiscretizedCollisionChecking::create
-		       (robot, 0.05)),
+		       (robot, 0.02)),
       collisionObstacles_ (), constraints_ (),
-      configurationShooter_(BasicConfigurationShooter::create (robot)),
-      vmax_ (8), mu_ (1.2)
+      //configurationShooter_(BasicConfigurationShooter::create (robot))
+      configurationShooter_(ContactConfigurationShooter::create (robot, *this))
+      //configurationShooter_(ConfigurationProjectionShooter::create (robot, *this))
     {
       configValidations_->add (CollisionValidation::create (robot));
       configValidations_->add (JointBoundValidation::create (robot));
@@ -64,8 +68,10 @@ namespace hpp {
       }
       ecs.lower (ecs.dimension () - 1) = -M_PI;
       ecs.upper (ecs.dimension () - 1) = M_PI;
-      // Do not allow z component of cone direction being negative ...
-      //ecs.lower (ecs.dimension () - 1) = 0;
+      parabolaResults_.reserve (3);
+      parabolaResults_.resize (3);
+      memset(&parabolaResults_[0], 0,
+	     parabolaResults_.size() * sizeof parabolaResults_[0]);
     }
 
     // ======================================================================

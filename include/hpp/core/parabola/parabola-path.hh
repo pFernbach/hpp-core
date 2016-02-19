@@ -149,19 +149,9 @@ namespace hpp {
 
       /// Set the three parabola coefficients
       void coefficients (vector_t coefs) const {
-	assert (coefs.size () == 3 || coefs.size () == 5);
-	if (coefs.size () == 3) {
-	  coefficients_(0) = coefs (0);
-	  coefficients_(1) = coefs (1);
-	  coefficients_(2) = coefs (2);
-	}
-	else {
-	  coefficients_(0) = coefs (0);
-	  coefficients_(1) = coefs (1);
-	  coefficients_(2) = coefs (2);
-	  coefficients_(3) = coefs (3);
-	  coefficients_(4) = coefs (4);
-	}
+	assert (coefs.size () == 4);
+	for (std::size_t i = 0; i < 4; i++)
+	  coefficients_(i) = coefs (i);
       }
 
       /// Get path coefficients
@@ -213,9 +203,8 @@ namespace hpp {
       Configuration_t initial_;
       Configuration_t end_;
       ParabolaPathWkPtr_t weak_;
-      mutable vector_t coefficients_; // 3 parabola coefficients
+      mutable vector_t coefficients_; // 4 parabola coefficients
       mutable value_type length_;
-      mutable bool workspaceDim_; // true for 3D, false for 2D
     }; // class ParabolaPath
   } //   namespace core
 } // namespace hpp

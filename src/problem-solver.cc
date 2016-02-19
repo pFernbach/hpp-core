@@ -43,8 +43,9 @@
 #include <hpp/core/parabola-planner.hh>
 #include <hpp/core/parabola/parabola-path.hh>
 #include <hpp/core/parabola/steering-method-parabola.hh>
-#include <hpp/core/contact-configuration-shooter.hh>
 #include <hpp/core/parabola/parabola-library.hh>
+#include <hpp/core/configuration-projection-shooter.hh>
+#include <hpp/core/contact-configuration-shooter.hh>
 
 namespace hpp {
   namespace core {
@@ -91,7 +92,7 @@ namespace hpp {
       //steeringMethodType_ ("SteeringMethodStraight"),
       steeringMethodType_ ("SteeringMethodParabola"),
       pathOptimizerTypes_ (), pathOptimizers_ (),
-      pathValidationType_ ("Discretized"), pathValidationTolerance_ (0.05),
+      pathValidationType_ ("Discretized"), pathValidationTolerance_ (0.02),
       collisionObstacles_ (), distanceObstacles_ (), obstacleMap_ (),
       errorThreshold_ (1e-4), maxIterations_ (20),
       passiveDofsMap_ (), comcMap_ (),
@@ -377,12 +378,14 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
     void ProblemSolver::initProblem ()
     {
       // Set shooter
-      problem_->configurationShooter
-        (get <ConfigurationShooterBuilder_t> (configurationShooterType_) (robot_));
+      //problem_->configurationShooter (get <ConfigurationShooterBuilder_t> (configurationShooterType_) (robot_));
+      //problem_->configurationShooter (ContactConfigurationShooter::create (robot_, *problem_));
+      problem_->configurationShooter (ConfigurationProjectionShooter::create (robot_, *problem_));
+
       // Set steeringMethod
       SteeringMethodPtr_t sm (
-          get <SteeringMethodBuilder_t> (steeringMethodType_) (problem_)
-          );
+			      get <SteeringMethodBuilder_t> (steeringMethodType_) (problem_)
+			      );
       problem_->steeringMethod (sm);
       PathPlannerBuilder_t createPlanner =
         get <PathPlannerBuilder_t> (pathPlannerType_);
@@ -396,8 +399,8 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
       //       the problem constraints.
       PathProjectorPtr_t pathProjector_ =
         createProjector (problem_->distance (), 
-            SteeringMethodStraight::create (problem_),
-            pathProjectorTolerance_);
+			 SteeringMethodStraight::create (problem_),
+			 pathProjectorTolerance_);
       problem_->pathProjector (pathProjector_);
       /// create Path optimizer
       // Reset init and goal configurations
@@ -436,7 +439,9 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
     void ProblemSolver::solve ()
     {
       initProblem ();
-
+      problem_->parabolaResults_ [0] = 0;
+      problem_->parabolaResults_ [1] = 0 ;
+      problem_->parabolaResults_ [2] = 0;
       PathVectorPtr_t path = pathPlanner_->solve ();
       paths_.push_back (path);
       //optimizePath (path);

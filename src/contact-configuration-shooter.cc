@@ -168,6 +168,7 @@ namespace hpp {
 	  //set configuration position to sampled point
 	  SetConfigTranslation(config, p);
 	  SampleRotation(config, jv);
+	  (*config) [index + 3] = 0; // set theta ecs to zero
 	  //hppDout (info, "config (after move): " << displayConfig (*config));
 	  // rotate and translate randomly until valid configuration found or
 	  // no obstacle is reachable
@@ -193,10 +194,9 @@ namespace hpp {
 		  for (size_type i=0; i<3; ++i)
 		    (*config) [index + i] = -lastDirection [i];
 		  *config = setOrientation (robot_, *config);
-		  Translate(config, -lastDirection * 
-			    (std::abs(report.result.getContact (0).
-				      penetration_depth) +0.005));
-		  //hppDout (info, "config (after translate): " << displayConfig (*config));
+		  //Translate(config, -lastDirection * (std::abs(report.result.getContact (0).penetration_depth) +0.005));
+		  Translate(config, -lastDirection * 0.005);
+	      //hppDout (info, "config (after translate): " << displayConfig (*config));
 		  limitDis--;
 		}
 	    }

@@ -56,7 +56,6 @@ namespace hpp {
     private:
       ConfigurationShooterPtr_t configurationShooter_;
       ParabolaPlannerWkPtr_t weakPtr_;
-      mutable bool workspaceDim_; // true for 3D, false for 2D
     };
     /// \}
   } // namespace core

@@ -27,7 +27,6 @@
 # include <hpp/core/configuration-projection-shooter.hh>
 # include <hpp/core/config-validations.hh>
 # include <hpp/core/distance-between-objects.hh>
-# include <hpp/core/problem.hh>
 #include <hpp/core/parabola/parabola-library.hh>
 # include <fcl/distance.h>
 

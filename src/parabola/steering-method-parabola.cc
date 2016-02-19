@@ -34,7 +34,7 @@ namespace hpp {
       device_ (problem-> robot ()),
       distance_ (WeighedDistance::create (device_.lock ())), weak_ (),
       g_(9.81), V0max_ (problem->vmax_), Vimpmax_ (problem->vmax_),
-      mu_ (problem->mu_), Dalpha_ (0.001), workspaceDim_ (false)
+      mu_ (problem->mu_), Dalpha_ (0.001)
     {
     }
 
@@ -49,157 +49,9 @@ namespace hpp {
       hppDout (info, "g_: " << g_ << " , mu_: " << mu_ << " , V0max: " <<
 	       V0max_ << " , Vimpmax: " << Vimpmax_);
 
-      /* Define dimension: 2D or 3D */
-      std::string name = device_.lock ()->getJointVector () [0]->name ();
-      if (name == "base_joint_xyz") // 3D (2D by default)
-	workspaceDim_ = true;
-
-      PathPtr_t pp;
-      if (!workspaceDim_)
-	pp = compute_2D_path (q1, q2);
-      else
-	pp = compute_3D_path (q1, q2);
+      PathPtr_t pp = compute_3D_path (q1, q2);
       return pp;
     }
-
-
-    PathPtr_t SteeringMethodParabola::compute_2D_path (ConfigurationIn_t q1,
-						       ConfigurationIn_t q2) 
-      const {
-      /* Define some constants */
-      const value_type x_0 = q1(0);
-      const value_type y_0 = q1(1);
-      const value_type x_imp = q2(0);
-      const value_type y_imp = q2(1);
-      const value_type X = x_imp - x_0;
-      const value_type Y = y_imp - y_0;
-      const value_type phi = atan (mu_);
-      hppDout (info, "x_0: " << x_0);
-      hppDout (info, "y_0: " << y_0);
-      hppDout (info, "x_imp: " << x_imp);
-      hppDout (info, "y_imp: " << y_imp);
-      hppDout (info, "X: " << X);
-      hppDout (info, "Y: " << Y);
-      hppDout (info, "phi: " << phi);
-
-      value_type gamma_0 = atan2(q1 (3), q1 (2)) - M_PI/2;
-      value_type gamma_imp = atan2(q2 (3), q2 (2)) - M_PI/2;
-	  
-      // keep gamma in [-pi/2 ; pi/2]
-      if (gamma_0 > M_PI/2)
-	gamma_0 = gamma_0 - M_PI;
-      if (gamma_0 < -M_PI/2)
-	gamma_0 = gamma_0 + M_PI;
-      if (gamma_imp > M_PI/2)
-	gamma_imp = gamma_imp - M_PI;
-      if (gamma_imp < -M_PI/2)
-	gamma_imp = gamma_imp + M_PI;
-
-      hppDout (info, "corrected gamma_imp: " << gamma_imp);
-	  
-      const value_type alpha_0_min = M_PI/2 + gamma_0 - phi;
-      const value_type alpha_0_max = M_PI/2 + gamma_0 + phi;
-      hppDout (info, "alpha_0_min: " << alpha_0_min);
-      hppDout (info, "alpha_0_max: " << alpha_0_max);
-
-      value_type alpha_inf4;
-      if (X > 0)
-	alpha_inf4 = atan (Y/X);
-      else
-	alpha_inf4 = atan (Y/X) + M_PI;
-      hppDout (info, "alpha_inf4: " << alpha_inf4);
-
-      const value_type alpha_imp_min = -M_PI/2 + gamma_imp - phi;
-      const value_type alpha_imp_max = -M_PI/2 + gamma_imp + phi;
-      hppDout (info, "alpha_imp_min: " << alpha_imp_min);
-      hppDout (info, "alpha_imp_max: " << alpha_imp_max);
-
-      value_type alpha_lim_plus;
-      value_type alpha_lim_minus;
-
-      bool fail = second_constraint (X, Y, &alpha_lim_plus, &alpha_lim_minus);
-      hppDout (info, "alpha_lim_plus: " << alpha_lim_plus);
-      hppDout (info, "alpha_lim_minus: " << alpha_lim_minus);
-
-      if (fail) {
-	hppDout (info, "failed to apply 2nd constraint");
-	return PathPtr_t ();
-      }
-
-      value_type alpha_imp_inf;
-      value_type alpha_imp_sup;
-
-      // n2_angle = pi/2 - gamma_imp
-      fail = third_constraint (fail, X, Y, alpha_imp_min, alpha_imp_max,
-			       &alpha_imp_sup, &alpha_imp_inf,
-			       M_PI/2 - gamma_imp);
-      hppDout (info, "alpha_imp_inf: " << alpha_imp_inf);
-      hppDout (info, "alpha_imp_sup: " << alpha_imp_sup);
-
-      if (fail) {
-	hppDout (info, "failed to apply 3rd constraint");
-	return PathPtr_t ();
-      }
-
-      value_type alpha_inf_bound = 0;
-      value_type alpha_sup_bound = 0;
-
-      /* Define alpha_0 satisfying constraints and minimizing parab length */
-      if (X > 0) {
-	alpha_inf_bound = std::max (std::max(alpha_imp_inf, alpha_lim_minus),
-				    std::max(alpha_0_min,
-					     alpha_inf4 + Dalpha_));
-	if (alpha_imp_min < -M_PI/2)
-	  alpha_sup_bound = std::min(alpha_0_max, alpha_lim_plus);
-	else
-	  alpha_sup_bound = std::min(alpha_0_max,
-				     std::min(alpha_lim_plus, alpha_imp_sup));
-      }
-      else {
-	alpha_sup_bound = std::min (std::min(alpha_imp_sup,alpha_lim_plus),
-				    std::min(alpha_0_max,
-					     alpha_inf4 - Dalpha_));
-	if (alpha_imp_max > -M_PI/2)
-	  alpha_inf_bound = std::max(alpha_0_min, alpha_lim_minus);
-	else
-	  alpha_inf_bound = std::max(alpha_0_min,
-				     std::max(alpha_lim_minus, alpha_imp_inf));
-      }
-
-      hppDout (info, "alpha_inf_bound: " << alpha_inf_bound);
-      hppDout (info, "alpha_sup_bound: " << alpha_sup_bound);	
-
-      if (alpha_inf_bound > alpha_sup_bound) {
-	hppDout (info, "Constraints intersection is empty");
-	return PathPtr_t ();
-      }
-
-      /* Select alpha_0 */
-      value_type alpha = alpha_inf_bound;
-      if (X < 0) alpha = alpha_sup_bound;
-      
-      /* Compute Parabola */
-      const int signX = (X > 0) - (X < 0);
-
-      const value_type x0_dot = signX*sqrt((g_*X*X)/(2*(X*tan(alpha) - Y)));
-      const value_type y0_dot = tan(alpha)*x0_dot;
-      const value_type V0 = sqrt(x0_dot*x0_dot + y0_dot*y0_dot);
-      hppDout (info, "V0: " << V0);
-
-      vector_t coefs (3);
-      coefs (0) = -0.5*g_/(x0_dot*x0_dot);
-      coefs (1) = tan(alpha) + g_*x_0/(x0_dot*x0_dot);
-      coefs (2) = y_0 - tan(alpha)*x_0 -
-	0.5*g_*x_0*x_0/(x0_dot*x0_dot);
-      hppDout (info, "coefs: " << coefs.transpose ());
-
-      ParabolaPathPtr_t pp = ParabolaPath::create (device_.lock (), q1, q2,
-						   computeLength (q1, q2,coefs),
-						   coefs);
-      hppDout (info, "path: " << *pp);
-      return pp;
-    }
-
 
     PathPtr_t SteeringMethodParabola::compute_3D_path (ConfigurationIn_t q1,
 						       ConfigurationIn_t q2) 
@@ -242,6 +94,7 @@ namespace hpp {
 	  > q1 (index+2) * q1 (index+2)) { // cone 1 not vertical
 	if (!fiveth_constraint (q1, theta, 1, &delta1)) {
 	  hppDout (info, "plane_theta not intersecting first cone");
+	  problem_->parabolaResults_ [1] ++;
 	  return PathPtr_t ();
 	}
       }
@@ -256,6 +109,7 @@ namespace hpp {
 	  > q2 (index+2) * q2 (index+2)) { // cone 1 not vertical
 	if (!fiveth_constraint (q2, theta, 2, &delta2)) {
 	  hppDout (info, "plane_theta not intersecting second cone");
+	  problem_->parabolaResults_ [1] ++;
 	  return PathPtr_t ();
 	}
       }
@@ -299,6 +153,7 @@ namespace hpp {
 
       if (fail) {
 	hppDout (info, "failed to apply 2nd constraint");
+	problem_->parabolaResults_ [2] ++;
 	return PathPtr_t ();
       }
 
@@ -311,6 +166,7 @@ namespace hpp {
 
       if (fail6) {
 	hppDout (info, "failed to apply 6th constraint");
+	problem_->parabolaResults_ [2] ++;
 	return PathPtr_t ();
       }
 
@@ -321,6 +177,7 @@ namespace hpp {
 				     &alpha_imp_inf, n2_angle);
       if (fail3) {
 	hppDout (info, "failed to apply 3rd constraint");
+	problem_->parabolaResults_ [2] ++;
 	return PathPtr_t ();
       }
 
@@ -369,6 +226,7 @@ namespace hpp {
 
       if (alpha_inf_bound > alpha_sup_bound) {
 	hppDout (info, "Constraints intersection is empty");
+	problem_->parabolaResults_ [2] ++;
 	return PathPtr_t ();
       }
 
@@ -387,14 +245,12 @@ namespace hpp {
       hppDout (info, "Vimp: " << Vimp);
 
       /* Compute Parabola coefficients */
-      vector_t coefs (5);
-      coefs.resize (5);
+      vector_t coefs (4);
       coefs (0) = -0.5*g_*inv_x_th_dot_0_sq;
       coefs (1) = tan(alpha) + g_*x_theta_0*inv_x_th_dot_0_sq;
       coefs (2) = z_0 - tan(alpha)*x_theta_0 -
 	0.5*g_*x_theta_0*x_theta_0*inv_x_th_dot_0_sq;
-      coefs (3) = theta; // NOT tan(theta) !
-      coefs (4) = -tan(theta)*x_0 + y_0;
+      coefs (3) = theta;
       hppDout (info, "coefs: " << coefs.transpose ());
 
       /* Verify that maximal height is not out of the bounds */
@@ -405,6 +261,7 @@ namespace hpp {
 	if (z_x_theta_max > device_.lock ()->rootJoint()->upperBound (2)) {
 	  hppDout (info, "z_x_theta_max: " << z_x_theta_max);
 	  hppDout (info, "Path is out of the bounds");
+	  problem_->parabolaResults_ [2] ++;
 	  return PathPtr_t ();
 	}
       }
@@ -489,22 +346,29 @@ namespace hpp {
       const value_type V = q (index+1);
       const value_type W = q (index+2);
       const value_type phi = atan (mu_);
+      const value_type denomK = U*U + V*V - W*W*mu_*mu_;
       const value_type psi = M_PI/2 - atan2 (W,U*cos(theta)+V*sin(theta));
       hppDout (info, "psi: " << psi);
       const bool nonVerticalCone = (psi < -phi && psi >= -M_PI/2)
 	|| (psi > phi && psi < M_PI - phi) 
 	|| (psi > M_PI + phi && psi <= 3*M_PI/2);
+      value_type epsilon = 1;
+      if (!nonVerticalCone && denomK < 0)
+	epsilon = -1;
       
       if (theta != M_PI /2 && theta != -M_PI /2) {
 	value_type x_plus, x_minus, z_x_plus, z_x_minus;
 	value_type tantheta = tan(theta);
 	value_type discr = (U*U+W*W)*mu_*mu_ - V*V - U*U*tantheta*tantheta + (V*V + W*W)*mu_*mu_*tantheta*tantheta + 2*(1+mu_*mu_)*U*V*tantheta;
 	hppDout (info, "discr: " << discr);
-	if (discr < 1e-1) {
+	if (discr < 0) {
+	  hppDout (info, "cone-plane intersection empty");
+	  return false;
+	}
+	if (discr < 5e-2) {
 	  hppDout (info, "cone-plane intersection too small");
 	  return false;
 	}
-	const value_type denomK = U*U + V*V - W*W*mu_*mu_;
 	const value_type K1 = (sqrt(discr) + U*W + U*W*mu_*mu_ + V*W*tantheta + V*W*mu_*mu_*tantheta)/denomK;
 	const value_type K2 = (-sqrt(discr) + U*W + U*W*mu_*mu_ + V*W*tantheta + V*W*mu_*mu_*tantheta)/denomK;
 	hppDout (info, "denomK= " << denomK);
@@ -563,54 +427,41 @@ namespace hpp {
 	hppDout (info, "z_x_plus: " << z_x_plus);
 	hppDout (info, "z_x_minus: " << z_x_minus);
 	
-	value_type cos2delta = (1+tantheta*tantheta+K1*K2)/(sqrt(1+tantheta*tantheta+K1*K1)*sqrt(1+tantheta*tantheta+K2*K2)); // default for non-vertical
-	
-	if (nonVerticalCone) {
-	  // not "vertical" cone
-	  hppDout (info, "cos(2*delta): " << cos2delta);
-	  *delta = 0.5*acos (cos2delta);
-	  hppDout (info, "delta: " << *delta);
-	  assert (*delta <= phi + 1e-5);
-	  return true;
-	}
-	else { // "vertical" cone
-	  if (denomK < 0)
-	    cos2delta = -cos2delta;
-	  hppDout (info, "cos(2*delta): " << cos2delta);
-	  *delta = 0.5*acos (cos2delta);
-	  hppDout (info, "delta: " << *delta);
-	  assert (*delta <= phi + 1e-5); //problem with cone intersection
-	  return true;
-	}
+	value_type cos2delta = epsilon*(1+tantheta*tantheta+K1*K2)/sqrt((1+tantheta*tantheta+K1*K1)*(1+tantheta*tantheta+K2*K2));
+	hppDout (info, "cos(2*delta): " << cos2delta);
+	*delta = 0.5*acos (cos2delta);
+	hppDout (info, "delta: " << *delta);
+	assert (*delta <= phi + 1e-5);
+	return true;
       }
-
       else { // theta = +-pi/2
 	value_type discr =  -U*U+(V*V + W*W)*(mu_*mu_);
-      hppDout (info, "discr: " << discr);
-      if (discr < 1e-6)
-	return false;
-			
-      value_type y = 1;
-      if (theta == -M_PI /2)
-	y = -1;
-      hppDout (info, "y: " << y);
-      value_type z_y_plus = (sqrt(discr)*y+V*W*y+V*W*(mu_*mu_)*y)/(U*U+V*V-(W*W)*(mu_*mu_));
-      value_type z_y_minus = (-sqrt(discr)*y+V*W*y+V*W*(mu_*mu_)*y)/(U*U+V*V-(W*W)*(mu_*mu_));
-      hppDout (info, "z_y_plus: " << z_y_plus);
-      hppDout (info, "z_y_minus: " << z_y_minus);
-      
-      if (psi < -phi || psi > phi) { // not "vertical" cone
-	value_type cos2delta = (y*y+1.0/pow(U*U+V*V-(W*W)*(mu_*mu_),2.0)*(sqrt(discr)*y+V*W*y+V*W*(mu_*mu_)*y)*(-sqrt(discr)*y+V*W*y+V*W*(mu_*mu_)*y))*1.0/sqrt(pow(fabs(y),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(sqrt(discr)*y+V*W*y+V*W*(mu_*mu_)*y),2.0))*1.0/sqrt(pow(fabs(y),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(-sqrt(discr)*y+V*W*y+V*W*(mu_*mu_)*y),2.0));
+	hppDout (info, "discr: " << discr);
+	if (discr < 0) {
+	  hppDout (info, "cone-plane intersection empty");
+	  return false;
+	}
+	if (discr < 5e-2) {
+	  hppDout (info, "cone-plane intersection too small");
+	  return false;
+	}
+	value_type G1 = ((1+mu_*mu_)*V*W + sqrt(discr))/(denomK);
+	value_type G2 = ((1+mu_*mu_)*V*W - sqrt(discr))/(denomK);
+	value_type y = 1;
+	if (theta == -M_PI /2)
+	  y = -1;
+	hppDout (info, "y: " << y);
+	value_type z_y_plus = G1*y; //TODO: sign selection of y
+	value_type z_y_minus = G2*y;
+	hppDout (info, "z_y_plus: " << z_y_plus);
+	hppDout (info, "z_y_minus: " << z_y_minus);
+
+	value_type cos2delta = epsilon*(1+G1*G2)/sqrt((1+G1*G1)*(1+G2*G2));
 	hppDout (info, "cos(2*delta): " << cos2delta);
 	*delta = 0.5*acos (cos2delta);
+	hppDout (info, "delta: " << *delta);
+	assert (*delta <= phi + 1e-5);
 	return true;
-      }
-      else { // "vertical" cone
-	value_type cos2delta = -1.0/sqrt(pow(fabs(y),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(sqrt(-(U*U)*(y*y)+(V*V)*(mu_*mu_)*(y*y)+(W*W)*(mu_*mu_)*(y*y))+V*W*y+V*W*(mu_*mu_)*y),2.0))*(y*y+(sqrt(-(U*U)*(y*y)+(V*V)*(mu_*mu_)*(y*y)+(W*W)*(mu_*mu_)*(y*y))+V*W*y+V*W*(mu_*mu_)*y)*1.0/pow(U*U+V*V-(W*W)*(mu_*mu_),2.0)*(-sqrt(-(U*U)*(y*y)+(V*V)*(mu_*mu_)*(y*y)+(W*W)*(mu_*mu_)*(y*y))+V*W*y+V*W*(mu_*mu_)*y))*1.0/sqrt(pow(fabs(y),2.0)+1.0/pow(fabs(U*U+V*V-(W*W)*(mu_*mu_)),2.0)*pow(fabs(-sqrt(-(U*U)*(y*y)+(V*V)*(mu_*mu_)*(y*y)+(W*W)*(mu_*mu_)*(y*y))+V*W*y+V*W*(mu_*mu_)*y),2.0));
-	hppDout (info, "cos(2*delta): " << cos2delta);
-	*delta = 0.5*acos (cos2delta);
-	return true;
-      }
       }
     }
 
@@ -658,12 +509,9 @@ namespace hpp {
       value_type length = 0;
       value_type x1 = q1 (0);
       value_type x2 = q2 (0);
-
-      if (workspaceDim_) { // 3D
-	const value_type theta = coefs (3);
-	x1 = cos(theta) * q1 (0)  + sin(theta) * q1 (1); // x_theta_0
-	x2 = cos(theta) * q2 (0) + sin(theta) * q2 (1); // x_theta_imp
-      }
+      const value_type theta = coefs (3);
+      x1 = cos(theta) * q1 (0)  + sin(theta) * q1 (1); // x_theta_0
+      x2 = cos(theta) * q2 (0) + sin(theta) * q2 (1); // x_theta_imp
 
       // Define integration bounds
       if (x1 > x2) { // re-order integration bounds

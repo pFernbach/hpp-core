@@ -21,6 +21,7 @@
 
 # include <sstream>
 # include <hpp/model/device.hh>
+# include <hpp/core/problem.hh>
 # include <hpp/core/configuration-shooter.hh>
 
 namespace hpp {
@@ -34,11 +35,10 @@ namespace hpp {
     {
     public:
       static ConfigurationProjectionShooterPtr_t 
-	create (const DevicePtr_t& robot, const Problem &problem,
-		const value_type shiftDistance)
+	create (const DevicePtr_t& robot, const Problem &problem)
       {
 	ConfigurationProjectionShooter* ptr =
-	  new ConfigurationProjectionShooter (robot, problem, shiftDistance);
+	  new ConfigurationProjectionShooter (robot, problem);
 	ConfigurationProjectionShooterPtr_t shPtr (ptr);
 	ptr->init (shPtr);
 	return shPtr;
@@ -60,10 +60,9 @@ namespace hpp {
       ///
       /// Note that translation joints have to be bounded.
       ConfigurationProjectionShooter (const DevicePtr_t& robot,
-				      const Problem &problem,
-				      const value_type shiftDistance) :
+				      const Problem &problem) :
 	problem_ (problem), robot_ (robot),
-	shiftDistance_ (shiftDistance)
+	shiftDistance_ (problem.shiftDistance_)
 	{
 	}
       void init (const ConfigurationProjectionShooterPtr_t& self)

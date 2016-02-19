@@ -214,11 +214,18 @@ namespace hpp {
 	distanceBetweenObjects_ = dbo;
       }
 
+      /// Set shift distance for configuration-projection-shooter
+      mutable value_type shiftDistance_;
+
       /// Set maximal velocity limitation of Parabola Steering Method
       mutable value_type vmax_;
       
       /// Set tangent friction coefficient of Parabola Steering Method
       mutable value_type mu_;
+
+      /// Gather results from ParabolaPlanner or ParabolaSM
+      /// Vector format: [Nb collision fails, Nb inters fails, Nb cnstr fails]
+      mutable std::vector<long> parabolaResults_;
 
     private :
       /// The robot

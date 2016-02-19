@@ -54,51 +54,16 @@ namespace hpp {
     }
 
     ParabolaPlanner::ParabolaPlanner (const Problem& problem):
-      PathPlanner (problem),
-      workspaceDim_ (false)
+      PathPlanner (problem)
     {
-      configurationShooter (BasicConfigurationShooter::create
-			    (problem.robot ()));
+      configurationShooter (problem.configurationShooter ());
     }
 
     ParabolaPlanner::ParabolaPlanner (const Problem& problem,
 				      const RoadmapPtr_t& roadmap) :
-      PathPlanner (problem, roadmap),
-      workspaceDim_ (false)
+      PathPlanner (problem, roadmap)
     {
-      // Use the contact-config-shooter only if there is at least one obstacle,
-      // and if all obstacles are meshes.
-      /*bool noContactShooter = false;
-      const ObjectVector_t& collisionObst = problem.collisionObstacles ();
-      if (collisionObst.size () > 0) {
-	for (ObjectVector_t::const_iterator objit = collisionObst.begin();
-	     objit != collisionObst.end(); ++objit) {
-	  if ((*objit)->fcl ()->collisionGeometry ()->getNodeType () !=
-	      fcl::BV_OBBRSS) {
-	    noContactShooter = true;
-	    hppDout (info, "no contact shooter because of: " 
-		     << (*objit)->name ());
-	  }
-	}
-      } 
-      else
-      noContactShooter = true;
-      if (!noContactShooter) {
-      hppDout (info, "create contact config shooter");
-      configurationShooter (ContactConfigurationShooter::create
-      (problem.robot (), problem));
-      }
-      else {
-      hppDout (info, "create config projection shooter");
-      configurationShooter (ConfigurationProjectionShooter::create
-      (problem.robot (), problem, 0.02));
-      }*/
-      /*hppDout (info, "create contact config shooter");
-	configurationShooter (ContactConfigurationShooter::create
-	(problem.robot (), problem));*/
-      hppDout (info, "create config projection shooter");
-      configurationShooter (ConfigurationProjectionShooter::create
-			    (problem.robot (), problem, 0.001));
+      configurationShooter (problem.configurationShooter ());
     }
 
     void ParabolaPlanner::init (const ParabolaPlannerWkPtr_t& weak)
@@ -124,35 +89,19 @@ namespace hpp {
       DelayedEdges_t fwdDelayedEdges, bwdDelayedEdges;
       /*const size_type index = robot->configSize()
 	- robot->extraConfigSpace ().dimension ();*/
-
-      /* Define dimension: 2D or 3D */
-      std::string name = robot->getJointVector () [0]->name ();
-      hppDout (info, "first joint name = " << name); // debug
-      if (name == "base_joint_xyz") // 3D
-	workspaceDim_ = true; // 3D (2D by default)
       
       // shoot a valid random configuration
       // and try to project this configuration at the contact of an obstacle
       ConfigurationPtr_t qrand;
-      ConfigurationProjectionShooterPtr_t Projshooter = 
-	ConfigurationProjectionShooter::create (robot, problem (), 0.01);
       do {
 	validConfig = false;
 	qrand = configurationShooter_->shoot ();
 	if (configValidations->validate (*qrand, validationReport)) {
 	  validConfig = true;
 	  hppDout (info, "qrand: " << displayConfig (*qrand));
-	  /*Configuration_t qtmp = Projshooter->project (*qrand);
-	  hppDout (info, "qtmp: " << displayConfig (qtmp));
-	  if (configValidations->validate (qtmp, validationReport))
-	  *qrand = qtmp;*/ // enhance configuration (nearer to obstacle)
-	  /*if(!workspaceDim_)
-	    validConfig = q_tmp (index + 1) >= 0;
-	    else
-	    validConfig = q_tmp (index + 2) >= 0;
-	  */
 	}
       } while (!validConfig);
+      // actually, q_rand is already at the contact so no projection needed
       ConfigurationPtr_t q_proj ( new Configuration_t (*qrand));
       hppDout (info, "q_proj: " << displayConfig (*q_proj));
 
@@ -177,28 +126,39 @@ namespace hpp {
 	    localPath = (*sm) (*qCC, *q_proj);
 
 	    // validate forward local path
-	    if (localPath && pathValidation->validate (localPath, false,
-						       validPart, report)) {
-	      hppDout (info, "forward path from SM is valid");
-	      // Save node from current cc that leads to shortest path
-	      //if (localPath->length () < lengthFwd) {
-	      //fwdEdgeExists = true;
-	      //lengthFwd = localPath->length ();
-	      // Save forward delayed edge from cc with shorter path
-	      fwdDelayedEdge = DelayedEdge_t (*n_it, q_proj, localPath);
-	      hppDout (info, "forward delayed edge is saved and pushed");
-	      fwdDelayedEdges.push_back (fwdDelayedEdge);
-	      //}
-	    }
+	    if (localPath) {
+	      if (pathValidation->validate (localPath, false,
+					    validPart, report)) {
+		hppDout (info, "forward path from SM is valid");
+		// Save node from current cc that leads to shortest path
+		//if (localPath->length () < lengthFwd) {
+		//fwdEdgeExists = true;
+		//lengthFwd = localPath->length ();
+		// Save forward delayed edge from cc with shorter path
+		fwdDelayedEdge = DelayedEdge_t (*n_it, q_proj, localPath);
+		hppDout (info, "forward delayed edge is saved and pushed");
+		fwdDelayedEdges.push_back (fwdDelayedEdge);
 
-	    // Create backward local path from q_proj to qCC
-	    // IDEA: could be avoided when we already know that planeTheta
-	    // is not intersecting both cones
-	    localPath = (*sm) (*q_proj, *qCC);
+		// Assuming that SM is symmetric (V0max = Vfmax)
+		bwdDelayedEdge = DelayedEdge_t (*n_it, q_proj,
+						localPath->reverse ());
+		hppDout (info, "backward delayed edge is saved and pushed");
+		bwdDelayedEdges.push_back (bwdDelayedEdge);
 
-	    // validate backward local path
-	    if (localPath && pathValidation->validate (localPath, false,
-						       validPart, report)) {
+		//}
+	      } else {
+		problem ().parabolaResults_ [0] ++;
+		hppDout (info, "parabola has collisions");
+	      }
+	      /* Useless bwd part since SM is symmetric
+	      // Create backward local path from q_proj to qCC
+	      // IDEA: could be avoided when we already know that planeTheta
+	      // is not intersecting both cones
+	      localPath = (*sm) (*q_proj, *qCC);
+
+	      // validate backward local path
+	      if (localPath && pathValidation->validate (localPath, false,
+	      validPart, report)) {
 	      hppDout (info, "backward path from SM is valid");
 	      // Save node from current cc that leads to shortest path
 	      //if (localPath->length () < lengthBwd) {
@@ -210,15 +170,16 @@ namespace hpp {
 	      hppDout (info, "backward delayed edge is saved and pushed");
 	      bwdDelayedEdges.push_back (bwdDelayedEdge);
 	      //}
-	    }
-
-	  }
+	      }
+	      */
+	    } //if SM has returned a non-empty path
+	  }//for nodes in cc
 	  //if (fwdEdgeExists) // avoid adding a null delayed-edge ...
 	  //fwdDelayedEdges.push_back (fwdDelayedEdge); // shortest path from cc
 	  //if (bwdEdgeExists) // avoid adding a null delayed-edge ...
 	  //bwdDelayedEdges.push_back (bwdDelayedEdge); // shortest path from cc
 	  
-	}// for nodes in cc
+	}//avoid impactNode cc
       }//for cc in roadmap
 
       // Insert in roadmap all forward delayed edges (DE)
