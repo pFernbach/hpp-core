@@ -74,7 +74,7 @@ namespace hpp {
 
     void ParabolaPlanner::oneStep ()
     {
-      typedef boost::tuple <NodePtr_t, ConfigurationPtr_t, PathPtr_t>
+      typedef boost::tuple <NodePtr_t, NodePtr_t, PathPtr_t>
 	DelayedEdge_t;
       typedef std::vector <DelayedEdge_t> DelayedEdges_t;
       DevicePtr_t robot (problem ().robot ());
@@ -129,23 +129,17 @@ namespace hpp {
 	    if (localPath) {
 	      if (pathValidation->validate (localPath, false,
 					    validPart, report)) {
-		hppDout (info, "forward path from SM is valid");
-		// Save node from current cc that leads to shortest path
-		//if (localPath->length () < lengthFwd) {
-		//fwdEdgeExists = true;
-		//lengthFwd = localPath->length ();
-		// Save forward delayed edge from cc with shorter path
-		fwdDelayedEdge = DelayedEdge_t (*n_it, q_proj, localPath);
-		hppDout (info, "forward delayed edge is saved and pushed");
+		// Save forward & backward delayed edges
+		fwdDelayedEdge = DelayedEdge_t (*n_it, impactNode, localPath);
 		fwdDelayedEdges.push_back (fwdDelayedEdge);
-
+		
 		// Assuming that SM is symmetric (V0max = Vfmax)
-		bwdDelayedEdge = DelayedEdge_t (*n_it, q_proj,
+		// WARN: I had to reverse *n_it, q_proj HERE
+		// To add edges consecutively to same vector fwdDelayedEdges
+		bwdDelayedEdge = DelayedEdge_t (impactNode, *n_it,
 						localPath->reverse ());
-		hppDout (info, "backward delayed edge is saved and pushed");
-		bwdDelayedEdges.push_back (bwdDelayedEdge);
+		fwdDelayedEdges.push_back (bwdDelayedEdge);
 
-		//}
 	      } else {
 		problem ().parabolaResults_ [0] ++;
 		hppDout (info, "parabola has collisions");
@@ -160,14 +154,7 @@ namespace hpp {
 	      if (localPath && pathValidation->validate (localPath, false,
 	      validPart, report)) {
 	      hppDout (info, "backward path from SM is valid");
-	      // Save node from current cc that leads to shortest path
-	      //if (localPath->length () < lengthBwd) {
-	      //bwdEdgeExists = true;
-	      //lengthBwd = localPath->length ();
-	      // Save backward delayed edge from cc with shorter path
-	      // keeping n_it* information for later edge adding...
 	      bwdDelayedEdge = DelayedEdge_t (*n_it, q_proj, localPath);
-	      hppDout (info, "backward delayed edge is saved and pushed");
 	      bwdDelayedEdges.push_back (bwdDelayedEdge);
 	      //}
 	      }
@@ -186,8 +173,10 @@ namespace hpp {
       for (DelayedEdges_t::const_iterator itEdge = fwdDelayedEdges.begin ();
 	   itEdge != fwdDelayedEdges.end (); ++itEdge) {
 	const NodePtr_t& nodeDE = itEdge-> get <0> ();
+	const NodePtr_t& node2DE = itEdge-> get <1> ();
 	const PathPtr_t& pathDE = itEdge-> get <2> ();
-	roadmap ()->addEdge (nodeDE, impactNode, pathDE);
+	//roadmap ()->addEdge (nodeDE, impactNode, pathDE);
+	roadmap ()->addEdge (nodeDE, node2DE, pathDE);
 	hppDout(info, "connection between q1: " 
 		<< displayConfig (*(nodeDE->configuration ()))
 		<< "and q2: "
@@ -195,7 +184,7 @@ namespace hpp {
       }
 
       // Insert in roadmap all backward delayed edges (DE)
-      for (DelayedEdges_t::const_iterator itEdge = bwdDelayedEdges.begin ();
+      /*for (DelayedEdges_t::const_iterator itEdge = bwdDelayedEdges.begin ();
 	   itEdge != bwdDelayedEdges.end (); ++itEdge) {
 	const NodePtr_t& nodeDE = itEdge-> get <0> ();
 	const PathPtr_t& pathDE = itEdge-> get <2> ();
@@ -204,7 +193,7 @@ namespace hpp {
 		<< displayConfig (*(impactNode->configuration ()))
 		<< "and q2: "
 		<< displayConfig (*(nodeDE->configuration ())));
-      }
+      }*/
     }
 
     void ParabolaPlanner::configurationShooter

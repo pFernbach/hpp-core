@@ -133,7 +133,7 @@ namespace hpp {
           wit != weights_.end();
           ++wit, ++trit)
 	{
-          if(*wit <= r) return *trit;
+          if(*wit >= r) return *trit;
 	}
       return triangles_[triangles_.size()-1]; // not supposed to happen
     }

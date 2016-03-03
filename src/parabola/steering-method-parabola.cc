@@ -347,6 +347,14 @@ namespace hpp {
       const value_type W = q (index+2);
       const value_type phi = atan (mu_);
       const value_type denomK = U*U + V*V - W*W*mu_*mu_;
+      if (denomK > -1e-6 && denomK < 1e-6) {
+	// TODO !
+	*delta = phi;
+	hppDout (info, "denomK = 0 case");
+	hppDout (info, "delta: " << *delta);
+	return true;
+      }
+      
       const value_type psi = M_PI/2 - atan2 (W,U*cos(theta)+V*sin(theta));
       hppDout (info, "psi: " << psi);
       const bool nonVerticalCone = (psi < -phi && psi >= -M_PI/2)

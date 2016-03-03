@@ -1,6 +1,6 @@
 //
 // Copyright (c) 2014 CNRS
-// Authors: Florent Lamiraux
+// Authors: Florent Lamiraux, Steve Tonneau
 //
 // This file is part of hpp-core
 // hpp-core is free software: you can redistribute it
@@ -64,7 +64,7 @@ namespace hpp {
       ContactConfigurationShooter (const DevicePtr_t& robot,
 				   const Problem &problem)
 	: robot_ (robot)
-	, shootLimit_ (1000)
+	, shootLimit_ (10000)
 	, displacementLimit_ (100)
 	, validator_ (CollisionValidation::create (robot_))
 	{

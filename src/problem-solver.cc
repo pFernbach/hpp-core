@@ -379,8 +379,8 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
     {
       // Set shooter
       //problem_->configurationShooter (get <ConfigurationShooterBuilder_t> (configurationShooterType_) (robot_));
-      //problem_->configurationShooter (ContactConfigurationShooter::create (robot_, *problem_));
-      problem_->configurationShooter (ConfigurationProjectionShooter::create (robot_, *problem_));
+      problem_->configurationShooter (ContactConfigurationShooter::create (robot_, *problem_));
+      //problem_->configurationShooter (ConfigurationProjectionShooter::create (robot_, *problem_));
 
       // Set steeringMethod
       SteeringMethodPtr_t sm (
