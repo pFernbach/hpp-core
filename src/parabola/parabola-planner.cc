@@ -86,27 +86,21 @@ namespace hpp {
       PathValidationReportPtr_t report;
       bool validConfig;
       DelayedEdge_t fwdDelayedEdge, bwdDelayedEdge;
-      DelayedEdges_t fwdDelayedEdges, bwdDelayedEdges;
-      /*const size_type index = robot->configSize()
-	- robot->extraConfigSpace ().dimension ();*/
+      DelayedEdges_t fwdDelayedEdges;
       
-      // shoot a valid random configuration
-      // and try to project this configuration at the contact of an obstacle
-      ConfigurationPtr_t qrand;
+      // shoot a valid random configuration at the contact of an obstacle
+      ConfigurationPtr_t q_rand;
       do {
 	validConfig = false;
-	qrand = configurationShooter_->shoot ();
-	if (configValidations->validate (*qrand, validationReport)) {
+	q_rand = configurationShooter_->shoot ();
+	if (configValidations->validate (*q_rand, validationReport)) {
 	  validConfig = true;
-	  hppDout (info, "qrand: " << displayConfig (*qrand));
+	  hppDout (info, "q_rand: " << displayConfig (*q_rand));
 	}
       } while (!validConfig);
-      // actually, q_rand is already at the contact so no projection needed
-      ConfigurationPtr_t q_proj ( new Configuration_t (*qrand));
-      hppDout (info, "q_proj: " << displayConfig (*q_proj));
 
-      // Add q_proj as a new node: here for the parabola, as the impact node
-      core::NodePtr_t impactNode = roadmap ()->addNode (q_proj);
+      // Add q_rand as a new node: here for the parabola, as the impact node
+      core::NodePtr_t impactNode = roadmap ()->addNode (q_rand);
 
       // try to connect the random configuration to each connected component
       // of the roadmap.
@@ -122,8 +116,8 @@ namespace hpp {
 	       n_it != cc->nodes ().end (); ++n_it){
 	    ConfigurationPtr_t qCC = (*n_it)->configuration ();
 
-	    // Create forward local path from qCC to q_proj
-	    localPath = (*sm) (*qCC, *q_proj);
+	    // Create forward local path from qCC to q_rand
+	    localPath = (*sm) (*qCC, *q_rand);
 
 	    // validate forward local path
 	    if (localPath) {
@@ -134,7 +128,7 @@ namespace hpp {
 		fwdDelayedEdges.push_back (fwdDelayedEdge);
 		
 		// Assuming that SM is symmetric (V0max = Vfmax)
-		// WARN: I had to reverse *n_it, q_proj HERE
+		// WARN: I had to reverse *n_it, q_rand HERE
 		// To add edges consecutively to same vector fwdDelayedEdges
 		bwdDelayedEdge = DelayedEdge_t (impactNode, *n_it,
 						localPath->reverse ());
@@ -144,28 +138,8 @@ namespace hpp {
 		problem ().parabolaResults_ [0] ++;
 		hppDout (info, "parabola has collisions");
 	      }
-	      /* Useless bwd part since SM is symmetric
-	      // Create backward local path from q_proj to qCC
-	      // IDEA: could be avoided when we already know that planeTheta
-	      // is not intersecting both cones
-	      localPath = (*sm) (*q_proj, *qCC);
-
-	      // validate backward local path
-	      if (localPath && pathValidation->validate (localPath, false,
-	      validPart, report)) {
-	      hppDout (info, "backward path from SM is valid");
-	      bwdDelayedEdge = DelayedEdge_t (*n_it, q_proj, localPath);
-	      bwdDelayedEdges.push_back (bwdDelayedEdge);
-	      //}
-	      }
-	      */
 	    } //if SM has returned a non-empty path
 	  }//for nodes in cc
-	  //if (fwdEdgeExists) // avoid adding a null delayed-edge ...
-	  //fwdDelayedEdges.push_back (fwdDelayedEdge); // shortest path from cc
-	  //if (bwdEdgeExists) // avoid adding a null delayed-edge ...
-	  //bwdDelayedEdges.push_back (bwdDelayedEdge); // shortest path from cc
-	  
 	}//avoid impactNode cc
       }//for cc in roadmap
 
@@ -175,25 +149,12 @@ namespace hpp {
 	const NodePtr_t& nodeDE = itEdge-> get <0> ();
 	const NodePtr_t& node2DE = itEdge-> get <1> ();
 	const PathPtr_t& pathDE = itEdge-> get <2> ();
-	//roadmap ()->addEdge (nodeDE, impactNode, pathDE);
 	roadmap ()->addEdge (nodeDE, node2DE, pathDE);
 	hppDout(info, "connection between q1: " 
 		<< displayConfig (*(nodeDE->configuration ()))
 		<< "and q2: "
 		<< displayConfig (*(impactNode->configuration ())));
       }
-
-      // Insert in roadmap all backward delayed edges (DE)
-      /*for (DelayedEdges_t::const_iterator itEdge = bwdDelayedEdges.begin ();
-	   itEdge != bwdDelayedEdges.end (); ++itEdge) {
-	const NodePtr_t& nodeDE = itEdge-> get <0> ();
-	const PathPtr_t& pathDE = itEdge-> get <2> ();
-	roadmap ()->addEdge (impactNode, nodeDE, pathDE);
-	hppDout(info, "connection between q1: " 
-		<< displayConfig (*(impactNode->configuration ()))
-		<< "and q2: "
-		<< displayConfig (*(nodeDE->configuration ())));
-      }*/
     }
 
     void ParabolaPlanner::configurationShooter

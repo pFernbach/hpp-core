@@ -153,10 +153,10 @@ namespace hpp {
 	  // pick one triangle randomly
 	  const T_TriangleNormal* sampled(0);
 	  double r = ((double) rand() / (RAND_MAX));
-	  if(r > 0.3)
+	  if(r > 0.7)
 	    sampled = &RandomPointIntriangle();
 	  else
-	    sampled = &WeightedTriangle();
+	    sampled = &WeightedTriangle(); // prefered
 	  const TrianglePoints& tri = sampled->second;
 	  //stackoverflow.com/questions/4778147/sample-random-point-in-triangle
 	  double r1, r2;
