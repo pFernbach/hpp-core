@@ -17,6 +17,7 @@
 // <http://www.gnu.org/licenses/>.
 
 # include <hpp/util/debug.hh>
+# include <hpp/core/path-validation.hh>
 # include <hpp/core/path-vector.hh>
 # include <hpp/core/parabola/parabola-path.hh>
 # include <hpp/core/parabola/steering-method-parabola.hh>
@@ -34,7 +35,7 @@ namespace hpp {
       device_ (problem-> robot ()),
       distance_ (WeighedDistance::create (device_.lock ())), weak_ (),
       g_(9.81), V0max_ (problem->vmax_), Vimpmax_ (problem->vmax_),
-      mu_ (problem->mu_), Dalpha_ (0.001)
+      mu_ (problem->mu_), Dalpha_ (0.001), nLimit_ (6)
     {
     }
 
@@ -230,45 +231,56 @@ namespace hpp {
 	return PathPtr_t ();
       }
 
-      /* Select alpha_0 */
-      //value_type alpha = alpha_inf_bound; //debug
-      value_type alpha = 0.5*(alpha_inf_bound + alpha_sup_bound); // better
+      /* Select alpha_0 as middle of ]alpha_inf_bound,alpha_sup_bound[ */
+      value_type alpha = 0.5*(alpha_inf_bound + alpha_sup_bound);
       hppDout (info, "alpha: " << alpha);
       
-      /* Compute Parabola initial and final velocities */
-      const value_type x_theta_0_dot = sqrt((g_ * X_theta * X_theta)
-					    /(2 * (X_theta*tan(alpha) - Z)));
-      const value_type inv_x_th_dot_0_sq = 1/(x_theta_0_dot*x_theta_0_dot);
-      const value_type V0 = sqrt((1 + tan(alpha)*tan(alpha))) * x_theta_0_dot;
-      hppDout (info, "V0: " << V0);
-      const value_type Vimp = sqrt(1 + (-g_*X*inv_x_th_dot_0_sq+tan(alpha)) *(-g_*X*inv_x_th_dot_0_sq+tan(alpha))) * x_theta_0_dot; // x_theta_0_dot > 0
-      hppDout (info, "Vimp: " << Vimp);
-
       /* Compute Parabola coefficients */
-      vector_t coefs (4);
-      coefs (0) = -0.5*g_*inv_x_th_dot_0_sq;
-      coefs (1) = tan(alpha) + g_*x_theta_0*inv_x_th_dot_0_sq;
-      coefs (2) = z_0 - tan(alpha)*x_theta_0 -
-	0.5*g_*x_theta_0*x_theta_0*inv_x_th_dot_0_sq;
-      coefs (3) = theta;
+      vector_t coefs = computeCoefficients (alpha, theta, X_theta, Z, 
+					    x_theta_0, z_0);
       hppDout (info, "coefs: " << coefs.transpose ());
 
-      /* Verify that maximal height is not out of the bounds */
-      const value_type x_theta_max = - 0.5 * coefs (1) / coefs (0);
-      const value_type z_x_theta_max = coefs (0)*x_theta_max*x_theta_max +
-	coefs (1)*x_theta_max + coefs (2);
-      if (x_theta_0 <= x_theta_max && x_theta_max <= x_theta_imp) {
-	if (z_x_theta_max > device_.lock ()->rootJoint()->upperBound (2)) {
-	  hppDout (info, "z_x_theta_max: " << z_x_theta_max);
-	  hppDout (info, "Path is out of the bounds");
-	  problem_->parabolaResults_ [2] ++;
-	  return PathPtr_t ();
-	}
+      /* Verify that maximal heigh of smaller parab is not out of the bounds */
+      const vector_t coefsInf = computeCoefficients (alpha_inf_bound, theta,
+						     X_theta, Z, x_theta_0,
+						     z_0);
+      bool maxHeightRespected = parabMaxHeightRespected (coefsInf, x_theta_0,
+							 x_theta_imp);
+      if (!maxHeightRespected) {
+	hppDout (info, "Path always out of the bounds");
+	problem_->parabolaResults_ [0] ++;
+	return PathPtr_t ();
       }
+      maxHeightRespected = parabMaxHeightRespected (coefs, x_theta_0,
+						    x_theta_imp);
+
+      // parabola path with alpha_0 as the middle of alpha_0 bounds
       ParabolaPathPtr_t pp = ParabolaPath::create (device_.lock (), q1, q2,
 						   computeLength (q1, q2,coefs),
 						   coefs);
-      hppDout (info, "path: " << *pp);
+      const PathValidationPtr_t pathValidation (problem_->pathValidation ());
+      PathValidationReportPtr_t report;
+      PathPtr_t validPart;
+      bool hasCollisions = !pathValidation->validate (pp, false, 
+						      validPart, report);
+      std::size_t n = 0;
+      if (hasCollisions || !maxHeightRespected) {
+	problem_->parabolaResults_ [0] ++; // not increased during dichotomy
+	hppDout (info, "parabola has collisions, start dichotomy");
+	while ((hasCollisions || !maxHeightRespected) && n < nLimit_) {
+	  alpha = dichotomy (alpha_inf_bound, alpha_sup_bound, n);
+	  coefs = computeCoefficients (alpha, theta, X_theta, Z, x_theta_0,
+				       z_0);
+	  maxHeightRespected = parabMaxHeightRespected (coefs, x_theta_0,
+						    x_theta_imp);
+	  pp = ParabolaPath::create (device_.lock (), q1, q2,
+				     computeLength (q1, q2, coefs), coefs);
+	  hppDout (info, "Dichotomy iteration: " << n);
+	  n++;
+	}//while
+      }
+      hasCollisions = !pathValidation->validate (pp, false, validPart, report);
+      if (hasCollisions) return PathPtr_t ();
       return pp;
     }
 
@@ -342,19 +354,13 @@ namespace hpp {
 						    value_type *delta) const {
       const size_type index = device_.lock ()->configSize()
 	- device_.lock ()->extraConfigSpace ().dimension ();
-      const value_type U = q (index);
-      const value_type V = q (index+1);
-      const value_type W = q (index+2);
+      const value_type U = q (index); // n_x
+      const value_type V = q (index+1); // n_y
+      const value_type W = q (index+2); // n_z
+      hppDout (info, "U= " << U << ", V= " << V << ", W= " << W);
       const value_type phi = atan (mu_);
       const value_type denomK = U*U + V*V - W*W*mu_*mu_;
-      if (denomK > -1e-6 && denomK < 1e-6) {
-	// TODO !
-	*delta = phi;
-	hppDout (info, "denomK = 0 case");
-	hppDout (info, "delta: " << *delta);
-	return true;
-      }
-      
+      const bool tanThetaDef = theta != M_PI /2 && theta != -M_PI /2;  
       const value_type psi = M_PI/2 - atan2 (W,U*cos(theta)+V*sin(theta));
       hppDout (info, "psi: " << psi);
       const bool nonVerticalCone = (psi < -phi && psi >= -M_PI/2)
@@ -363,10 +369,44 @@ namespace hpp {
       value_type epsilon = 1;
       if (!nonVerticalCone && denomK < 0)
 	epsilon = -1;
+
+      if (denomK > -1e-6 && denomK < 1e-6) { // denomK (or 'A') = 0
+	hppDout (info, "denomK = 0 case");
+	if (tanThetaDef) {
+	  const value_type tanTheta = tan(theta);
+	  if (U + V*tanTheta != 0) {
+	    const value_type numH = mu_*mu_*(U*U+V*V*tanTheta*tanTheta)-U*U*tanTheta*tanTheta-V*V+2*U*V*tanTheta*(1+mu_*mu_)-W*W*(1+tanTheta*tanTheta);
+	    const value_type H = -numH/(2*(1+mu_*mu_)*fabs(W)*fabs(U+V*tanTheta));
+	    const value_type cos2delta = H/sqrt(1+tanTheta*tanTheta+H*H);
+	    hppDout (info, "cos(2*delta): " << cos2delta);
+	    *delta = 0.5*acos (cos2delta);
+	    hppDout (info, "delta: " << *delta);
+	    assert (*delta <= phi + 1e-5);
+	    return true;
+	  } else { // U + V*tanTheta = 0
+	    *delta = M_PI/4;
+	    hppDout (info, "delta: " << *delta);
+	    return true;
+	  }
+	} else { // theta = +-pi/2
+	  if (V != 0) {
+	    const value_type L = -(V*V*(1+mu_*mu_)-1)/(2*(1+mu_*mu_)*fabs(V)*fabs(W));
+	    const value_type cos2delta = L/sqrt(1+L*L);
+	    hppDout (info, "cos(2*delta): " << cos2delta);
+	    *delta = 0.5*acos (cos2delta);
+	    hppDout (info, "delta: " << *delta);
+	    assert (*delta <= phi + 1e-5);
+	    return true;
+	  } else { // V = 0
+	    hppDout (info, "cone-plane intersection is a line");
+	    return false;
+	  }
+	}
+      } // if denomK = 0
       
-      if (theta != M_PI /2 && theta != -M_PI /2) {
+      if (tanThetaDef) {
 	value_type x_plus, x_minus, z_x_plus, z_x_minus;
-	value_type tantheta = tan(theta);
+	const value_type tantheta = tan(theta);
 	value_type discr = (U*U+W*W)*mu_*mu_ - V*V - U*U*tantheta*tantheta + (V*V + W*W)*mu_*mu_*tantheta*tantheta + 2*(1+mu_*mu_)*U*V*tantheta;
 	hppDout (info, "discr: " << discr);
 	if (discr < 0) {
@@ -537,6 +577,59 @@ namespace hpp {
       }
       hppDout (info, "length = " << length);
       return length;
+    }
+
+    vector_t SteeringMethodParabola::computeCoefficients
+    (const value_type alpha, const value_type theta,
+     const value_type X_theta, const value_type Z,
+     const value_type x_theta_0, const value_type z_0) const {
+      vector_t coefs (4);
+      const value_type x_theta_0_dot = sqrt((g_ * X_theta * X_theta)
+					    /(2 * (X_theta*tan(alpha) - Z)));
+      const value_type inv_x_th_dot_0_sq = 1/(x_theta_0_dot*x_theta_0_dot);
+      coefs (0) = -0.5*g_*inv_x_th_dot_0_sq;
+      coefs (1) = tan(alpha) + g_*x_theta_0*inv_x_th_dot_0_sq;
+      coefs (2) = z_0 - tan(alpha)*x_theta_0 -
+	0.5*g_*x_theta_0*x_theta_0*inv_x_th_dot_0_sq;
+      coefs (3) = theta;
+      // Also ompute initial and final velocities
+      const value_type V0 = sqrt((1 + tan(alpha)*tan(alpha))) * x_theta_0_dot;
+      const value_type Vimp = sqrt(1 + (-g_*X_theta*inv_x_th_dot_0_sq+tan(alpha)) *(-g_*X_theta*inv_x_th_dot_0_sq+tan(alpha))) * x_theta_0_dot;
+      hppDout (info, "V0: " << V0);
+      hppDout (info, "Vimp: " << Vimp);
+      return coefs;
+    }
+
+    bool SteeringMethodParabola::parabMaxHeightRespected
+    (const vector_t coefs, const value_type x_theta_0,
+     const value_type x_theta_imp) const {
+      const value_type x_theta_max = - 0.5 * coefs (1) / coefs (0);
+      const value_type z_x_theta_max = coefs (0)*x_theta_max*x_theta_max +
+	coefs (1)*x_theta_max + coefs (2);
+      if (x_theta_0 <= x_theta_max && x_theta_max <= x_theta_imp) {
+	if (z_x_theta_max > device_.lock ()->rootJoint()->upperBound (2)) {
+	  //hppDout (info, "z_x_theta_max: " << z_x_theta_max);
+	  return false;
+	}
+      }
+      return true;
+    }
+
+    value_type SteeringMethodParabola:: dichotomy (value_type a_inf,
+						   value_type a_plus, 
+						   std::size_t n) const {
+      value_type alpha, e; // e in ]0,1[
+      switch (n) { // NLimit_ <= 6, otherwise fill missing values for n>5
+      case 0: e = 0.25; break;
+      case 1: e = 0.75; break;
+      case 2: e = 0.125; break;
+      case 3: e = 0.375; break;
+      case 4: e = 0.625; break;
+      case 5: e = 0.875; break;
+      default: e = 0.5; break; // not supposed to happen
+      }
+      alpha = e*a_plus + (1-e)*a_inf;
+      return alpha;
     }
 
   } // namespace core

@@ -72,7 +72,7 @@ namespace hpp {
 	problem_ (other.problem_), device_ (other.device_),
 	distance_ (other.distance_), weak_ (), g_(other.g_),
 	V0max_ (other.V0max_), Vimpmax_ (other.Vimpmax_),mu_ (other.mu_),
-	Dalpha_ (other.Dalpha_)
+	Dalpha_ (other.Dalpha_), nLimit_ (other.nLimit_)
 	{
 	}
 
@@ -132,7 +132,25 @@ namespace hpp {
 
       /// Function equivalent to sqrt( 1 + f'(x)^2 ) in 2D
       /// Function equivalent to sqrt( 1 + y0_dot/x0_dot + fz'(x)^2 ) in 3D
-      value_type lengthFunction (const value_type x,const vector_t coefs) const;
+      value_type lengthFunction (const value_type x, const vector_t coefs) const;
+
+      /// Compute parabola coefficients from takeoff angle and other parameters
+      vector_t computeCoefficients (const value_type alpha,
+				    const value_type theta,
+				    const value_type X_theta,
+				    const value_type Z,
+				    const value_type x_theta_0,
+				    const value_type z_0) const;
+
+	  /// Return true if the maximal height of the parabola does not exceed the 
+	  /// freeflyer translation bounds, false otherwise.
+	  bool parabMaxHeightRespected (const vector_t coefs, 
+				  const value_type x_theta_0,
+				  const value_type x_theta_imp) const;
+				  
+      /// Process Dichotomy at rank n in interval ]a_inf, a_plus[
+      value_type dichotomy (value_type a_inf, value_type a_plus, 
+			    std::size_t n) const;
 
       ProblemPtr_t problem_;
       DeviceWkPtr_t device_;
@@ -143,6 +161,7 @@ namespace hpp {
       mutable value_type Vimpmax_; // maximal landing velocity
       mutable value_type mu_; // friction coefficient
       value_type Dalpha_; // alpha increment
+      mutable std::size_t nLimit_; // number of Dichotomies applied
     }; // SteeringMethodParabola
     /// \}
   } // namespace core

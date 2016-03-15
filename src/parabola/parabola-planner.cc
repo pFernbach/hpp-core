@@ -21,13 +21,11 @@
 #include <hpp/model/configuration.hh>
 #include <hpp/core/config-validations.hh>
 #include <hpp/core/connected-component.hh>
-#include <hpp/core/config-projector.hh>
 #include <hpp/model/device.hh>
 #include <hpp/core/parabola/parabola-planner.hh>
 #include <hpp/core/node.hh>
 #include <hpp/core/edge.hh>
 #include <hpp/core/path.hh>
-#include <hpp/core/path-validation.hh>
 #include <hpp/core/problem.hh>
 #include <hpp/core/roadmap.hh>
 #include <hpp/core/steering-method.hh>
@@ -83,7 +81,6 @@ namespace hpp {
       SteeringMethodPtr_t sm (problem ().steeringMethod ());
       PathPtr_t validPath, validPart, localPath;
       ValidationReportPtr_t validationReport;
-      PathValidationReportPtr_t report;
       bool validConfig;
       DelayedEdge_t fwdDelayedEdge, bwdDelayedEdge;
       DelayedEdges_t fwdDelayedEdges;
@@ -119,25 +116,18 @@ namespace hpp {
 	    // Create forward local path from qCC to q_rand
 	    localPath = (*sm) (*qCC, *q_rand);
 
-	    // validate forward local path
+	    // if a forward path is returned, it is valid
 	    if (localPath) {
-	      if (pathValidation->validate (localPath, false,
-					    validPart, report)) {
-		// Save forward & backward delayed edges
-		fwdDelayedEdge = DelayedEdge_t (*n_it, impactNode, localPath);
-		fwdDelayedEdges.push_back (fwdDelayedEdge);
+	      // Save forward & backward delayed edges
+	      fwdDelayedEdge = DelayedEdge_t (*n_it, impactNode, localPath);
+	      fwdDelayedEdges.push_back (fwdDelayedEdge);
 		
-		// Assuming that SM is symmetric (V0max = Vfmax)
-		// WARN: I had to reverse *n_it, q_rand HERE
-		// To add edges consecutively to same vector fwdDelayedEdges
-		bwdDelayedEdge = DelayedEdge_t (impactNode, *n_it,
-						localPath->reverse ());
-		fwdDelayedEdges.push_back (bwdDelayedEdge);
-
-	      } else {
-		problem ().parabolaResults_ [0] ++;
-		hppDout (info, "parabola has collisions");
-	      }
+	      // Assuming that SM is symmetric (V0max = Vfmax)
+	      // WARN: I had to reverse *n_it, q_rand HERE
+	      // To add edges consecutively to same vector fwdDelayedEdges
+	      bwdDelayedEdge = DelayedEdge_t (impactNode, *n_it,
+					      localPath->reverse ());
+	      fwdDelayedEdges.push_back (bwdDelayedEdge);
 	    } //if SM has returned a non-empty path
 	  }//for nodes in cc
 	}//avoid impactNode cc
