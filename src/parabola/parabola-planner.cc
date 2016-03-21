@@ -98,6 +98,8 @@ namespace hpp {
 
       // Add q_rand as a new node: here for the parabola, as the impact node
       core::NodePtr_t impactNode = roadmap ()->addNode (q_rand);
+      impactNode->indexInRM (roadmap ()->nodeIndex_);
+      roadmap ()->nodeIndex_++;
 
       // try to connect the random configuration to each connected component
       // of the roadmap.
@@ -134,16 +136,24 @@ namespace hpp {
       }//for cc in roadmap
 
       // Insert in roadmap all forward delayed edges (DE)
+      bool avoidAddIdenticalEdge = true;
       for (DelayedEdges_t::const_iterator itEdge = fwdDelayedEdges.begin ();
 	   itEdge != fwdDelayedEdges.end (); ++itEdge) {
 	const NodePtr_t& nodeDE = itEdge-> get <0> ();
 	const NodePtr_t& node2DE = itEdge-> get <1> ();
 	const PathPtr_t& pathDE = itEdge-> get <2> ();
-	roadmap ()->addEdge (nodeDE, node2DE, pathDE);
+	EdgePtr_t edge = roadmap ()->addEdge (nodeDE, node2DE, pathDE);
 	hppDout(info, "connection between q1: " 
 		<< displayConfig (*(nodeDE->configuration ()))
 		<< "and q2: "
-		<< displayConfig (*(impactNode->configuration ())));
+		<< displayConfig (*(node2DE->configuration ())));
+	edge->indexInRM (roadmap ()->edgeIndex_);
+	// assure that forward and backward edges have same edgeIndex
+	if (!avoidAddIdenticalEdge) {
+	  roadmap ()->edgeIndex_++;
+	  avoidAddIdenticalEdge = true;
+	} else
+	  avoidAddIdenticalEdge = false;
       }
     }
 

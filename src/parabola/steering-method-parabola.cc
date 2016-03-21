@@ -269,18 +269,20 @@ namespace hpp {
 	hppDout (info, "parabola has collisions, start dichotomy");
 	while ((hasCollisions || !maxHeightRespected) && n < nLimit_) {
 	  alpha = dichotomy (alpha_inf_bound, alpha_sup_bound, n);
+	  hppDout (info, "alpha= " << alpha);
 	  coefs = computeCoefficients (alpha, theta, X_theta, Z, x_theta_0,
 				       z_0);
 	  maxHeightRespected = parabMaxHeightRespected (coefs, x_theta_0,
 						    x_theta_imp);
 	  pp = ParabolaPath::create (device_.lock (), q1, q2,
 				     computeLength (q1, q2, coefs), coefs);
+	  hasCollisions = !pathValidation->validate (pp, false, validPart,
+						     report);
 	  hppDout (info, "Dichotomy iteration: " << n);
 	  n++;
 	}//while
       }
-      hasCollisions = !pathValidation->validate (pp, false, validPart, report);
-      if (hasCollisions) return PathPtr_t ();
+      if (hasCollisions || !maxHeightRespected) return PathPtr_t ();
       return pp;
     }
 

@@ -51,13 +51,19 @@ namespace hpp {
       {
 	NodePtr_t node = findPath ();
 	Edges_t edges;
+	long i = 1;
 
 	while (node) {
 	  Parent_t::const_iterator itEdge = parent_.find (node);
 	  if (itEdge != parent_.end ()) {
 	    EdgePtr_t edge = itEdge->second;
 	    edges.push_front (edge);
+	    roadmap_->nodeIndexVector_.resize (i);
+	    roadmap_->nodeIndexVector_.push_back (node->indexInRM ());
+	    roadmap_->edgeIndexVector_.resize (i);
+	    roadmap_->edgeIndexVector_.push_back (edge->indexInRM ());
 	    node = edge->from ();
+	    i++;
 	  }
 	  else node = NodePtr_t (0x0);
 	}

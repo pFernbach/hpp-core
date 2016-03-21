@@ -35,7 +35,7 @@ namespace hpp {
     {
     public:
       Edge (NodePtr_t n1, NodePtr_t n2, const PathPtr_t& path) :
-	n1_ (n1), n2_ (n2), path_ (path)
+	n1_ (n1), n2_ (n2), path_ (path), indexInRM_ (0)
       {
       }
       NodePtr_t from () const
@@ -50,10 +50,24 @@ namespace hpp {
       {
 	return path_;
       }
+
+      /// Get edge index in Roadmap
+      long indexInRM () const
+      {
+	return indexInRM_;
+      }
+
+      /// Set edge index in Roadmap
+      void indexInRM (long index) const
+      {
+	indexInRM_ = index;
+      }
+
     private:
       NodePtr_t n1_;
       NodePtr_t n2_;
       PathPtr_t path_;
+      mutable long indexInRM_;
     }; // class Edge
     /// \}
   } // namespace core

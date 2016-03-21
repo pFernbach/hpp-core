@@ -38,10 +38,13 @@ namespace hpp {
     }
 
     Roadmap::Roadmap (const DistancePtr_t& distance, const DevicePtr_t&) :
+      edgeIndexVector_ (), nodeIndexVector_ (),
       distance_ (distance), connectedComponents_ (), nodes_ (), edges_ (),
       initNode_ (), goalNodes_ (),
       nearestNeighbor_ (new nearestNeighbor::Basic (distance))
     {
+      edgeIndexVector_.reserve (100);
+      nodeIndexVector_.reserve (100);
     }
 
     Roadmap::~Roadmap ()

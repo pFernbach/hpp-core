@@ -79,6 +79,8 @@ namespace hpp {
       srand (timmy);
       hppDout (info, "time (NULL)= " << std::setprecision (15) << timmy);*/
       interrupt_ = false;
+      roadmap ()->edgeIndex_ = 0;
+      roadmap ()->nodeIndex_ = 0;
       bool solved = false;
       startSolve ();
       tryDirectPath ();

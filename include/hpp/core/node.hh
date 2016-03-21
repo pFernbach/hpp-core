@@ -65,11 +65,25 @@ namespace hpp {
       ConfigurationPtr_t configuration () const;
       /// Print node in a stream
       std::ostream& print (std::ostream& os) const;
+
+      /// Get node index in Roadmap
+      long indexInRM () const
+      {
+	return indexInRM_;
+      }
+      
+      /// Set node index in Roadmap
+      void indexInRM (long index) const
+      {
+	indexInRM_ = index;
+      }
+
     private:
       ConfigurationPtr_t configuration_;
       Edges_t outEdges_;
       Edges_t inEdges_;
       ConnectedComponentPtr_t connectedComponent_;
+      mutable long indexInRM_;
     }; // class Node
     std::ostream& operator<< (std::ostream& os, const Node& n);
     /// \}

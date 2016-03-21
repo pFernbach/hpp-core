@@ -29,14 +29,16 @@ namespace hpp {
 
     Node::Node (const ConfigurationPtr_t& configuration) :
       configuration_ (configuration),
-      connectedComponent_ (ConnectedComponent::create ())
+      connectedComponent_ (ConnectedComponent::create ()),
+      indexInRM_ (0)
     {
     }
 
     Node::Node (const ConfigurationPtr_t& configuration,
 		ConnectedComponentPtr_t connectedComponent) :
       configuration_ (configuration),
-      connectedComponent_ (connectedComponent)
+      connectedComponent_ (connectedComponent),
+      indexInRM_ (0)
     {
       assert (connectedComponent_);
     }

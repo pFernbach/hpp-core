@@ -129,6 +129,15 @@ namespace hpp {
       /// Print roadmap in a stream
       std::ostream& print (std::ostream& os) const;
 
+      /// To save edge index
+      mutable long edgeIndex_;
+      /// To save node index
+      mutable long nodeIndex_;
+      /// Indexes of edges in Roadmap forming the solution path
+      mutable std::vector<long> edgeIndexVector_;
+      /// Indexes of nodes in Roadmap forming the solution path
+      mutable std::vector<long> nodeIndexVector_;
+
     protected:
       /// Constructor
       /// \param distance distance function for nearest neighbor computations
