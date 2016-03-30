@@ -19,9 +19,9 @@
 #include <boost/tuple/tuple.hpp>
 #include <hpp/util/debug.hh>
 #include <hpp/model/configuration.hh>
+#include <hpp/model/device.hh>
 #include <hpp/core/config-validations.hh>
 #include <hpp/core/connected-component.hh>
-#include <hpp/model/device.hh>
 #include <hpp/core/parabola/parabola-planner.hh>
 #include <hpp/core/node.hh>
 #include <hpp/core/edge.hh>
@@ -30,7 +30,6 @@
 #include <hpp/core/roadmap.hh>
 #include <hpp/core/steering-method.hh>
 #include <hpp/core/basic-configuration-shooter.hh>
-#include <boost/tuple/tuple.hpp>
 #include <hpp/core/contact-configuration-shooter.hh>
 #include <hpp/core/configuration-projection-shooter.hh>
 
@@ -55,6 +54,15 @@ namespace hpp {
       PathPlanner (problem)
     {
       configurationShooter (problem.configurationShooter ());
+      hppDout (info, "set extra conf");
+      problem.robot()->setDimensionExtraConfigSpace(problem.robot()->extraConfigSpace().dimension() + 4);
+      model::ExtraConfigSpace& ecs = problem.robot()->extraConfigSpace ();
+      for (size_type i = 0; i < ecs.dimension (); i++) {
+	ecs.lower (i) = -1;
+	ecs.upper (i) = 1;
+      }
+      ecs.lower (ecs.dimension () - 1) = -M_PI;
+      ecs.upper (ecs.dimension () - 1) = M_PI;
     }
 
     ParabolaPlanner::ParabolaPlanner (const Problem& problem,
@@ -62,6 +70,15 @@ namespace hpp {
       PathPlanner (problem, roadmap)
     {
       configurationShooter (problem.configurationShooter ());
+      hppDout (info, "set extra conf");
+      problem.robot()->setDimensionExtraConfigSpace(problem.robot()->extraConfigSpace().dimension() + 4);
+      model::ExtraConfigSpace& ecs = problem.robot()->extraConfigSpace ();
+      for (size_type i = 0; i < ecs.dimension (); i++) {
+	ecs.lower (i) = -1;
+	ecs.upper (i) = 1;
+      }
+      ecs.lower (ecs.dimension () - 1) = -M_PI;
+      ecs.upper (ecs.dimension () - 1) = M_PI;
     }
 
     void ParabolaPlanner::init (const ParabolaPlannerWkPtr_t& weak)

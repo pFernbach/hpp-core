@@ -57,17 +57,6 @@ namespace hpp {
     {
       configValidations_->add (CollisionValidation::create (robot));
       configValidations_->add (JointBoundValidation::create (robot));
-      if (robot->getJointVector () [0]->name () == "base_joint_xyz") // 3D
-	robot_->setDimensionExtraConfigSpace (4);
-      else
-	robot_->setDimensionExtraConfigSpace (2);
-      model::ExtraConfigSpace& ecs = robot->extraConfigSpace ();
-      for (size_type i = 0; i < ecs.dimension (); i++) {
-	ecs.lower (i) = -1;
-	ecs.upper (i) = 1;
-      }
-      ecs.lower (ecs.dimension () - 1) = -M_PI;
-      ecs.upper (ecs.dimension () - 1) = M_PI;
       parabolaResults_.reserve (3);
       parabolaResults_.resize (3);
       memset(&parabolaResults_[0], 0,

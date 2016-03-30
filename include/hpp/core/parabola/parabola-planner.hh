@@ -26,7 +26,7 @@ namespace hpp {
     /// \addtogroup path_planning
     /// \{
 
-    /// Generic implementation of RRT algorithm
+    /// Generic implementation of PRM algorithm
     class HPP_CORE_DLLAPI ParabolaPlanner : public PathPlanner
     {
     public:
