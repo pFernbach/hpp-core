@@ -30,9 +30,6 @@
 #include <hpp/core/continuous-collision-checking/dichotomy.hh>
 #include <hpp/core/continuous-collision-checking/progressive.hh>
 #include <hpp/core/basic-configuration-shooter.hh>
-#include <hpp/core/configuration-projection-shooter.hh>
-#include <hpp/core/contact-configuration-shooter.hh>
-#include <hpp/core/parabola/steering-method-parabola.hh>
 
 
 namespace hpp {
@@ -41,19 +38,16 @@ namespace hpp {
     // ======================================================================
 
     Problem::Problem (DevicePtr_t robot) :
-      shiftDistance_ (0.001), vmax_ (7), mu_ (1.2),
+      vmax_ (7), mu_ (1.2),
       robot_ (robot),
       distance_ (WeighedDistance::create (robot)),
       initConf_ (), goalConfigurations_ (),
-      //steeringMethod_ (SteeringMethodStraight::create (this)),
-      steeringMethod_ (SteeringMethodParabola::create (this)),
+      steeringMethod_ (SteeringMethodStraight::create (this)),
       configValidations_ (ConfigValidations::create ()),
       pathValidation_ (DiscretizedCollisionChecking::create
 		       (robot, 0.02)),
       collisionObstacles_ (), constraints_ (),
-      //configurationShooter_(BasicConfigurationShooter::create (robot))
-      configurationShooter_(ContactConfigurationShooter::create (robot, *this))
-      //configurationShooter_(ConfigurationProjectionShooter::create (robot, *this))
+      configurationShooter_(BasicConfigurationShooter::create (robot))
     {
       configValidations_->add (CollisionValidation::create (robot));
       configValidations_->add (JointBoundValidation::create (robot));

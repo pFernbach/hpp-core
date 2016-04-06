@@ -71,11 +71,6 @@ SET(${LIBRARY_NAME}_SOURCES
   path-projector/global.cc
   path-projector.cc
   parser/roadmap-factory.cc
-  parabola/parabola-path.cc
-  parabola/steering-method-parabola.cc
-  parabola/parabola-planner.cc
-  contact-configuration-shooter.cc
-  configuration-projection-shooter.cc
   )
 
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src)

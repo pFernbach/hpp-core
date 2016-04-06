@@ -214,9 +214,6 @@ namespace hpp {
 	distanceBetweenObjects_ = dbo;
       }
 
-      /// Set shift distance for configuration-projection-shooter
-      mutable value_type shiftDistance_;
-
       /// Set maximal velocity limitation of Parabola Steering Method
       mutable value_type vmax_;
       

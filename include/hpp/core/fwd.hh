@@ -77,8 +77,6 @@ namespace hpp {
     HPP_PREDEF_CLASS (VisibilityPrmPlanner);
     HPP_PREDEF_CLASS (WeighedDistance);
     class KDTree;
-    HPP_PREDEF_CLASS (ContactConfigurationShooter);
-    HPP_PREDEF_CLASS (ConfigurationProjectionShooter);
 
     class ComparisonType;
     typedef boost::shared_ptr <ComparisonType> ComparisonTypePtr_t;
@@ -214,10 +212,6 @@ namespace hpp {
     typedef std::vector < NumericalConstraintPtr_t > NumericalConstraints_t;
     typedef std::map <std::string, CenterOfMassComputationPtr_t>
     CenterOfMassComputationMap_t;
-    typedef boost::shared_ptr < ContactConfigurationShooter >
-    ContactConfigurationShooterPtr_t;
-    typedef boost::shared_ptr < ConfigurationProjectionShooter >
-    ConfigurationProjectionShooterPtr_t;
 
     // Collision pairs
     typedef std::pair <CollisionObjectPtr_t, CollisionObjectPtr_t>
@@ -270,17 +264,6 @@ namespace hpp {
       typedef boost::shared_ptr <Interpolated> InterpolatedPtr_t;
     } // namespace steeringMethod
     
-    //namespace parabola { // TODO
-    HPP_PREDEF_CLASS (ParabolaPlanner);
-    typedef boost::shared_ptr <ParabolaPlanner> ParabolaPlannerPtr_t;
-    HPP_PREDEF_CLASS (SteeringMethodParabola);
-    typedef boost::shared_ptr <SteeringMethodParabola>
-    SteeringMethodParabolaPtr_t;
-    HPP_PREDEF_CLASS (ParabolaPath);
-    typedef boost::shared_ptr <ParabolaPath> ParabolaPathPtr_t;
-    typedef boost::shared_ptr <const ParabolaPath> ParabolaPathConstPtr_t;
-    //} // namespace parabola
-      
   } // namespace core
 } // namespace hpp
 

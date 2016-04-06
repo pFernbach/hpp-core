@@ -40,12 +40,6 @@
 #include <hpp/core/visibility-prm-planner.hh>
 #include <hpp/core/weighed-distance.hh>
 #include <hpp/core/basic-configuration-shooter.hh>
-#include <hpp/core/parabola-planner.hh>
-#include <hpp/core/parabola/parabola-path.hh>
-#include <hpp/core/parabola/steering-method-parabola.hh>
-#include <hpp/core/parabola/parabola-library.hh>
-#include <hpp/core/configuration-projection-shooter.hh>
-#include <hpp/core/contact-configuration-shooter.hh>
 
 namespace hpp {
   namespace core {
@@ -85,12 +79,10 @@ namespace hpp {
       constraints_ (), robot_ (), problem_ (), pathPlanner_ (),
       roadmap_ (), paths_ (),
       pathProjectorType_ ("None"), pathProjectorTolerance_ (0.2),
-      //pathPlannerType_ ("DiffusingPlanner"),
-      pathPlannerType_ ("ParabolaPlanner"),
+      pathPlannerType_ ("DiffusingPlanner"),
       initConf_ (), goalConfigurations_ (),
       configurationShooterType_ ("BasicConfigurationShooter"),
-      //steeringMethodType_ ("SteeringMethodStraight"),
-      steeringMethodType_ ("SteeringMethodParabola"),
+      steeringMethodType_ ("SteeringMethodStraight"),
       pathOptimizerTypes_ (), pathOptimizers_ (),
       pathValidationType_ ("Discretized"), pathValidationTolerance_ (0.02),
       collisionObstacles_ (), distanceObstacles_ (), obstacleMap_ (),
@@ -99,7 +91,6 @@ namespace hpp {
       distanceBetweenObjects_ ()
     {
       add <PathPlannerBuilder_t> ("DiffusingPlanner",     DiffusingPlanner::createWithRoadmap);
-add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRoadmap);
       add <PathPlannerBuilder_t> ("VisibilityPrmPlanner", VisibilityPrmPlanner::createWithRoadmap);
 
       add <ConfigurationShooterBuilder_t> ("BasicConfigurationShooter", BasicConfigurationShooter::create);
@@ -107,10 +98,6 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
       add <SteeringMethodBuilder_t> ("SteeringMethodStraight", boost::bind(
             static_cast<SteeringMethodStraightPtr_t (*)(const ProblemPtr_t&)>
               (&SteeringMethodStraight::create), _1
-            ));
-      add <SteeringMethodBuilder_t> ("SteeringMethodParabola", boost::bind(
-            static_cast<SteeringMethodParabolaPtr_t (*)(const ProblemPtr_t&)>
-              (&SteeringMethodParabola::create), _1
             ));
 
       // Store path optimization methods in map.
@@ -378,14 +365,10 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
     void ProblemSolver::initProblem ()
     {
       // Set shooter
-      //problem_->configurationShooter (get <ConfigurationShooterBuilder_t> (configurationShooterType_) (robot_));
-      problem_->configurationShooter (ContactConfigurationShooter::create (robot_, *problem_));
-      //problem_->configurationShooter (ConfigurationProjectionShooter::create (robot_, *problem_));
+      problem_->configurationShooter (get <ConfigurationShooterBuilder_t> (configurationShooterType_) (robot_));
 
       // Set steeringMethod
-      SteeringMethodPtr_t sm (
-			      get <SteeringMethodBuilder_t> (steeringMethodType_) (problem_)
-			      );
+      SteeringMethodPtr_t sm (get <SteeringMethodBuilder_t> (steeringMethodType_) (problem_));
       problem_->steeringMethod (sm);
       PathPlannerBuilder_t createPlanner =
         get <PathPlannerBuilder_t> (pathPlannerType_);
@@ -446,8 +429,8 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
       PathVectorPtr_t path = pathPlanner_->solve ();
       paths_.push_back (path);
       //optimizePath (path);
-      PathVectorPtr_t orient_path = createOrientations (path);
-      paths_.push_back (orient_path);
+      //PathVectorPtr_t orient_path = createOrientations (path);
+      //paths_.push_back (orient_path);
     }
 
     bool ProblemSolver::directPath (ConfigurationIn_t start,
@@ -583,7 +566,7 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
       return distanceObstacles_;
     }
     
-    PathVectorPtr_t ProblemSolver::createOrientations (PathVectorPtr_t path)
+    /*PathVectorPtr_t ProblemSolver::createOrientations (PathVectorPtr_t path)
     {
       PathVectorPtr_t orient_path = PathVector::create (robot_->configSize (),
 							robot_->numberDof ());
@@ -636,7 +619,7 @@ add <PathPlannerBuilder_t> ("ParabolaPlanner",     ParabolaPlanner::createWithRo
 						       length, coefs));
       }
       return orient_path;
-    }
+      }*/
 
   } //   namespace core
 } // namespace hpp

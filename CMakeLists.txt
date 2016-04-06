@@ -107,11 +107,6 @@ SET(${PROJECT_NAME}_HEADERS
   include/hpp/core/path-projector.hh
   include/hpp/core/nearest-neighbor.hh
   include/hpp/core/parser/roadmap-factory.hh
-  include/hpp/core/parabola/parabola-planner.hh
-  include/hpp/core/parabola/parabola-path.hh
-  include/hpp/core/parabola/steering-method-parabola.hh
-  include/hpp/core/contact-configuration-shooter.hh
-  include/hpp/core/configuration-projection-shooter.hh
   include/hpp/core/parabola/parabola-library.hh
   )
 
