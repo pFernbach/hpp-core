@@ -31,7 +31,7 @@
 #include <hpp/core/explicit-numerical-constraint.hh>
 
 // #define SVD_THRESHOLD Eigen::NumTraits<value_type>::dummy_precision()
-#define SVD_THRESHOLD 1e-5
+#define SVD_THRESHOLD 1e-8
 
 namespace hpp {
   namespace core {
@@ -40,10 +40,6 @@ namespace hpp {
       HPP_DEFINE_TIMECOUNTER (optimize);
     }
 
-    std::ostream& operator<< (std::ostream& os, const hpp::statistics::SuccessStatistics& ss)
-    {
-      return ss.print (os);
-    }
     HPP_DEFINE_REASON_FAILURE (REASON_MAX_ITER, "Max Iterations reached");
     HPP_DEFINE_REASON_FAILURE (REASON_ERROR_INCREASED, "Error increased");
 
@@ -89,7 +85,8 @@ namespace hpp {
       dqSmall_ (robot->numberDof ()),
       nbNonLockedDofs_ (robot_->numberDof ()),
       nbLockedDofs_ (0),
-      squareNorm_(0), explicitComputation_ (false), weak_ ()
+      squareNorm_(0), explicitComputation_ (false), weak_ (),
+      statistics_ ("ConfigProjector " + name)
     {
       dq_.setZero ();
       stack_.push_back (PriorityStack (3,nbNonLockedDofs_)); /// First and last
@@ -117,7 +114,8 @@ namespace hpp {
       dq_ (cp.dq_.size ()), dqSmall_ (cp.dqSmall_.size ()),
       nbNonLockedDofs_ (cp.nbNonLockedDofs_), nbLockedDofs_ (cp.nbLockedDofs_),
       squareNorm_ (cp.squareNorm_),
-      explicitComputation_ (cp.explicitComputation_), weak_ ()
+      explicitComputation_ (cp.explicitComputation_), weak_ (),
+      statistics_ (cp.statistics_)
     {
       dq_.setZero ();
       for (LockedJoints_t::const_iterator it = cp.lockedJoints_.begin ();
@@ -172,14 +170,22 @@ namespace hpp {
       functions_.push_back (nm);
       passiveDofs_.push_back (passiveDofs);
       rhsReducedSize_ += nm->rhsSize ();
-      if (stack_.size () > 0)
-        stack_.back ().level_ = 1; // General case
-      for (std::size_t i = stack_.size (); i < priority + 1; ++i) {
-        stack_.push_back (PriorityStack (1, nbNonLockedDofs_)); // Middle
+      if (priority >= stack_.size ()) { // If we must add a priority level
+        stack_.front ().level_ = 0; // become (or stay) First
+        if (stack_.size() > 1)
+          stack_.back ().level_ = 1; // becomes Middle
+        for (std::size_t i = stack_.size (); i < priority; ++i) {
+          stack_.push_back (PriorityStack (1, nbNonLockedDofs_)); // Middle
+        }
+        stack_.push_back (PriorityStack (2, nbNonLockedDofs_)); // Last
       }
       if (priority > 0) { // There are more than 2 levels
-        stack_.front ().level_ = 0; // First
-        stack_.back  ().level_ = 2; // Last
+        assert (stack_.front ().level_ == 0);
+        assert (stack_.back ().level_ == 2);
+        // stack_.front ().level_ = 0; // First
+        // stack_.back  ().level_ = 2; // Last
+      } else {
+        assert (stack_.front ().level_ == 3);
       }
       stack_[priority].add (nm, passiveDofs);
       // TODO: no need to recompute intervals.
@@ -557,15 +563,8 @@ namespace hpp {
 	++iter;
       };
       if (squareNorm_ > squareErrorThreshold_) {
-        if (!errorDecreased)
-          statistics_.addFailure (REASON_ERROR_INCREASED);
-        else
-          statistics_.addFailure (REASON_MAX_ITER);
-        if (statistics_.nbFailure () > statistics_.nbSuccess ()) {
-          hppDout (warning, "Config projector " << name()
-              << " seems to fail often.");
-          hppDout (warning, statistics_);
-        }
+        statistics_.addFailure ((!errorDecreased)?REASON_ERROR_INCREASED:REASON_MAX_ITER);
+        statistics_.isLowRatio (true);
       } else {
         statistics_.addSuccess();
       }
@@ -581,11 +580,11 @@ namespace hpp {
     }
 
     bool ConfigProjector::oneStep (ConfigurationOut_t configuration,
-        const value_type& alpha)
+        vectorOut_t dq, const value_type& alpha)
     {
       computeValueAndJacobian (configuration, value_, reducedJacobian_);
-      computePrioritizedIncrement (value_, reducedJacobian_, alpha, dq_);
-      model::integrate (robot_, configuration, dq_, configuration);
+      computePrioritizedIncrement (value_, reducedJacobian_, alpha, dq);
+      model::integrate (robot_, configuration, dq, configuration);
       return isSatisfied (configuration);
     }
 
@@ -675,6 +674,7 @@ namespace hpp {
 
     void ConfigProjector::add (const LockedJointPtr_t& lockedJoint)
     {
+      if (lockedJoint->numberDof () == 0) return;
       // If the same dof is already locked, replace by new value
       for (LockedJoints_t::iterator itLock = lockedJoints_.begin ();
 	   itLock != lockedJoints_.end (); ++itLock) {

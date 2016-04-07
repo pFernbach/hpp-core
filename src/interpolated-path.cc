@@ -109,12 +109,11 @@ namespace hpp {
 				     value_type param) const
     {
       assert (param >= timeRange().first);
-      assert (param <= timeRange().second);
       if (param == timeRange ().first || timeRange ().second == 0) {
 	result.noalias () = initial();
 	return true;
       }
-      if (param == timeRange ().second) {
+      if (param >= timeRange ().second) {
 	result.noalias () = end();
 	return true;
       }
@@ -180,16 +179,6 @@ namespace hpp {
     DevicePtr_t InterpolatedPath::device () const
     {
       return device_;
-    }
-
-    void InterpolatedPath::checkPath () const
-    {
-      assert (!constraints() || constraints()->isSatisfied (initial()));
-      if (constraints() && !constraints()->isSatisfied (end())) {
-	hppDout (error, *constraints());
-	hppDout (error, end().transpose ());
-	abort ();
-      }
     }
   } //   namespace core
 } // namespace hpp

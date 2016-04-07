@@ -16,6 +16,8 @@
 // hpp-core  If not, see
 // <http://www.gnu.org/licenses/>.
 
+#include <hpp/core/problem.hh>
+
 #include <iostream>
 
 #include <hpp/util/debug.hh>
@@ -23,7 +25,7 @@
 #include <hpp/core/collision-validation.hh>
 #include <hpp/core/joint-bound-validation.hh>
 #include <hpp/core/config-validations.hh>
-#include <hpp/core/problem.hh>
+#include <hpp/core/problem-target.hh>
 #include <hpp/core/steering-method-straight.hh>
 #include <hpp/core/weighed-distance.hh>
 #include <hpp/core/discretized-collision-checking.hh>
@@ -41,7 +43,7 @@ namespace hpp {
       vmax_ (7), mu_ (1.2),
       robot_ (robot),
       distance_ (WeighedDistance::create (robot)),
-      initConf_ (), goalConfigurations_ (),
+      initConf_ (), target_ (),
       steeringMethod_ (SteeringMethodStraight::create (this)),
       configValidations_ (ConfigValidations::create ()),
       pathValidation_ (DiscretizedCollisionChecking::create
@@ -74,21 +76,21 @@ namespace hpp {
 
     const Configurations_t& Problem::goalConfigs () const
     {
-      return goalConfigurations_;
+      return target_->goalConfigurations ();
     }
 
     // ======================================================================
 
     void Problem::addGoalConfig (const ConfigurationPtr_t& config)
     {
-      goalConfigurations_.push_back (config);
+      target_->addGoalConfig (config);
     }
 
     // ======================================================================
 
     void Problem::resetGoalConfigs ()
     {
-      goalConfigurations_.clear ();
+      target_->resetGoalConfigs ();
     }
 
     // ======================================================================
@@ -180,21 +182,7 @@ namespace hpp {
 	throw std::runtime_error (oss.str ());
       }
 
-      if (goalConfigurations_.size () == 0) {
-	std::string msg ("No goal config in problem.");
-	hppDout (error, msg);
-	throw std::runtime_error (msg);
-      }
-
-      for (ConfigConstIterator_t it = goalConfigurations_.begin ();
-	   it != goalConfigurations_.end (); it++) {
-	const ConfigurationPtr_t& goalConf (*it);
-	if (!configValidations_->validate (*goalConf, report)) {
-	  std::ostringstream oss;
-	  oss << *report;
-	  throw std::runtime_error (oss.str ());
-	}
-      }
+      target_->check ();
     }
 
     // ======================================================================

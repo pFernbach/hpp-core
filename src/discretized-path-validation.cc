@@ -141,8 +141,8 @@ namespace hpp {
 
     DiscretizedPathValidation::DiscretizedPathValidation
     (const DevicePtr_t& robot, const value_type& stepSize) :
-      robot_ (robot), configValidations_ (ConfigValidations::create ()),
-      stepSize_ (stepSize)
+      stepSize_ (stepSize), robot_ (robot),
+      configValidations_ (ConfigValidations::create ())
     {
     }
   } // namespace core

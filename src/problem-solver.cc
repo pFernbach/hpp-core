@@ -34,6 +34,8 @@
 #include <hpp/core/path-optimization/partial-shortcut.hh>
 #include <hpp/core/path-optimization/config-optimization.hh>
 #include <hpp/core/prune.hh>
+#include <hpp/core/problem-target/task-target.hh>
+#include <hpp/core/problem-target/goal-configurations.hh>
 #include <hpp/core/random-shortcut.hh>
 #include <hpp/core/roadmap.hh>
 #include <hpp/core/steering-method-straight.hh>
@@ -246,6 +248,52 @@ namespace hpp {
       goalConfigurations_.clear ();
     }
 
+    void ProblemSolver::addGoalConstraint (const ConstraintPtr_t& constraint)
+    {
+      if (!goalConstraints_) {
+        if (!robot_) throw std::logic_error ("You must provide a robot first");
+        goalConstraints_ = ConstraintSet::create (robot_, "Goal constraint set");
+      }
+      goalConstraints_->addConstraint (constraint);
+    }
+
+    void ProblemSolver::addGoalConstraint (const LockedJointPtr_t& lj)
+    {
+      if (!goalConstraints_) {
+        if (!robot_) throw std::logic_error ("You must provide a robot first");
+        goalConstraints_ = ConstraintSet::create (robot_, "Goal constraint set");
+      }
+      ConfigProjectorPtr_t  configProjector = goalConstraints_->configProjector ();
+      if (!configProjector) {
+	configProjector = ConfigProjector::create
+	  (robot_, "Goal ConfigProjector", errorThreshold_, maxIterations_);
+	goalConstraints_->addConstraint (configProjector);
+      }
+      configProjector->add (lj);
+    }
+
+    void ProblemSolver::addGoalConstraint (const std::string& constraintName,
+        const std::string& functionName, const std::size_t priority)
+    {
+      if (!goalConstraints_) {
+        if (!robot_) throw std::logic_error ("You must provide a robot first");
+        goalConstraints_ = ConstraintSet::create (robot_, "Goal constraint set");
+      }
+      ConfigProjectorPtr_t  configProjector = goalConstraints_->configProjector ();
+      if (!configProjector) {
+	configProjector = ConfigProjector::create
+	  (robot_, constraintName, errorThreshold_, maxIterations_);
+	goalConstraints_->addConstraint (configProjector);
+      }
+      configProjector->add (numericalConstraint (functionName),
+			    SizeIntervals_t (0), priority);
+    }
+
+    void ProblemSolver::resetGoalConstraint ()
+    {
+      goalConstraints_.reset ();
+    }
+
     void ProblemSolver::addConstraint (const ConstraintPtr_t& constraint)
     {
       if (robot_)
@@ -276,8 +324,7 @@ namespace hpp {
 
     void ProblemSolver::addFunctionToConfigProjector
     (const std::string& constraintName, const std::string& functionName,
-     const std::size_t priority
-     )
+     const std::size_t priority)
     {
       if (!robot_) {
 	hppDout (error, "Cannot add constraint while robot is not set");
@@ -389,11 +436,18 @@ namespace hpp {
       /// create Path optimizer
       // Reset init and goal configurations
       problem_->initConfig (initConf_);
-      problem_->resetGoalConfigs ();
+      ProblemTargetPtr_t target;
+      if (goalConstraints_) {
+        problemTarget::TaskTargetPtr_t t = problemTarget::TaskTarget::create (pathPlanner_);
+        t->constraints (goalConstraints_);
+        target = t;
+      } else
+        target = problemTarget::GoalConfigurations::create (pathPlanner_);
+      problem_->target (target);
       for (Configurations_t::const_iterator itConfig =
 	     goalConfigurations_.begin ();
 	   itConfig != goalConfigurations_.end (); ++itConfig) {
-	problem_->addGoalConfig (*itConfig);
+	target->addGoalConfig (*itConfig);
       }
     }
 
@@ -434,7 +488,7 @@ namespace hpp {
     }
 
     bool ProblemSolver::directPath (ConfigurationIn_t start,
-				    ConfigurationIn_t end, unsigned short& pathId)
+				    ConfigurationIn_t end, std::size_t& pathId)
     {
       // Create steering method using factory
       SteeringMethodPtr_t sm (get <SteeringMethodBuilder_t> 
@@ -453,24 +507,13 @@ namespace hpp {
       PathVectorPtr_t path (core::PathVector::create (dp->outputSize (),
 		 	   dp->outputDerivativeSize ()));
       path->appendPath (dp);
-      addPath (path);
-      
-      unsigned long count = 0;
-      for (PathVectors_t::const_iterator itPath = paths_.begin(); 
-          itPath != paths_.end(); itPath++) {
-	if (*itPath == path) {
-	  break;
-	}
-	count++;
-      }
-      pathId = count;
+      pathId = addPath (path);
       return PathValid;
     }
 
     bool ProblemSolver::addConfigToRoadmap (const ConfigurationPtr_t& config) 
     {
-      NodePtr_t newNode = roadmap_->addNode(config);
-      // add check to make sure node successfully added?
+      roadmap_->addNode(config);
       return true;	
     }  
 
@@ -484,8 +527,7 @@ namespace hpp {
       node1 = roadmap_->nearestNode(config1, distance1);
       node2 = roadmap_->nearestNode(config2, distance2);
       if (distance1 < accuracy && distance2 < accuracy) {
-        EdgePtr_t newEdge = roadmap_->addEdge(node1, node2, path);      
-        // add check for successful addition of edge?
+        roadmap_->addEdge(node1, node2, path);      
         return true;
       }
       return false;

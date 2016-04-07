@@ -194,6 +194,7 @@ namespace hpp {
       {
 	parent_t::init (self);
 	weak_ = self;
+        checkPath ();
       }
 
       void initCopy (StraightPathPtr_t self)

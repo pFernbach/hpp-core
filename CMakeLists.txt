@@ -34,7 +34,6 @@ SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
 SETUP_PROJECT()
 
-SEARCH_FOR_BOOST()
 # Activate hpp-util logging if requested
 SET (HPP_DEBUG FALSE CACHE BOOL "trigger hpp-util debug output")
 IF (HPP_DEBUG)
@@ -108,18 +107,21 @@ SET(${PROJECT_NAME}_HEADERS
   include/hpp/core/nearest-neighbor.hh
   include/hpp/core/parser/roadmap-factory.hh
   include/hpp/core/parabola/parabola-library.hh
+  include/hpp/core/problem-target.hh
+  include/hpp/core/problem-target/goal-configurations.hh
+  include/hpp/core/problem-target/task-target.hh
   )
 
 ADD_REQUIRED_DEPENDENCY("hpp-util >= 3")
 ADD_REQUIRED_DEPENDENCY("hpp-statistics")
 ADD_REQUIRED_DEPENDENCY("hpp-constraints >= 3")
-ADD_DOC_DEPENDENCY("hpp-model >= 3")
-
-# Add dependency toward hpp-model library in pkg-config file.
-PKG_CONFIG_APPEND_LIBS("hpp-core")
+ADD_REQUIRED_DEPENDENCY("hpp-model >= 3")
 
 ADD_SUBDIRECTORY(src)
-ADD_SUBDIRECTORY(tests EXCLUDE_FROM_ALL)
+ADD_SUBDIRECTORY(tests)
+
+# Add dependency toward hpp-core library in pkg-config file.
+PKG_CONFIG_APPEND_LIBS("hpp-core")
 
 INSTALL (FILES doc/continuous-collision-checking.pdf
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/${PROJECT_NAME}/doxygen-html)

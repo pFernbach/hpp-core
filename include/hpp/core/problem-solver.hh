@@ -55,13 +55,14 @@ namespace hpp {
     /// hpp-core library and component to be running in a middleware
     /// like CORBA or ROS.
     class HPP_CORE_DLLAPI ProblemSolver :
-      public Container <PathPlannerBuilder_t>,
-      public Container <PathOptimizerBuilder_t>,
-      public Container <PathValidationBuilder_t>,
-      public Container <PathProjectorBuilder_t>,
-      public Container <ConfigurationShooterBuilder_t>,
-      public Container <NumericalConstraintPtr_t>,
-      public Container <SteeringMethodBuilder_t>
+      public Containers <
+        boost::mpl::vector < PathPlannerBuilder_t,
+                             PathOptimizerBuilder_t,
+                             PathValidationBuilder_t,
+                             PathProjectorBuilder_t,
+                             ConfigurationShooterBuilder_t,
+                             NumericalConstraintPtr_t,
+                             SteeringMethodBuilder_t> >
     {
     public:
 
@@ -101,6 +102,15 @@ namespace hpp {
       virtual void addGoalConfig (const ConfigurationPtr_t& config);
       /// Reset the set of goal configurations
       void resetGoalConfigs ();
+      /// Add goal constraints
+      void addGoalConstraint (const ConstraintPtr_t& constraint);
+      /// Add goal LockedJoint
+      void addGoalConstraint (const LockedJointPtr_t& lj);
+      /// Add goal numerical constraints
+      void addGoalConstraint (const std::string& constraintName,
+          const std::string& functionName, const std::size_t priority);
+      /// Reset goal constraints
+      void resetGoalConstraint ();
       /// Set path planner type
       virtual void pathPlannerType (const std::string& type);
       /// Set steering method type
@@ -163,34 +173,6 @@ namespace hpp {
       {
         add (type, builder);
       }
-
-      /// Add an element to a container
-      template <typename Element>
-        void add (const std::string& name, const Element& element)
-        {
-          Container <Element>::add (name, element);
-        }
-
-      /// Check if a Container has a key.
-      template <typename Element>
-        bool has (const std::string& name) const
-        {
-          return Container <Element>::has (name);
-        }
-
-      /// Get an element of a container
-      template <typename Element>
-        const Element& get (const std::string& name) const
-        {
-          return Container <Element>::get (name);
-        }
-
-      /// Get keys of a container
-      template <typename Element, typename ReturnType>
-        ReturnType getKeys () const
-        {
-          return Container <Element>::template getKeys <ReturnType> ();
-        }
 
       /// Optimize path
       ///
@@ -456,7 +438,8 @@ namespace hpp {
       /// \param start, end: the configurations to link.
       /// \param pathId gets updated within the function as path added into path vector
       /// return false if direct path is not fully valid
-      bool directPath (ConfigurationIn_t start, ConfigurationIn_t end, unsigned short& pathId);
+      bool directPath (ConfigurationIn_t start, ConfigurationIn_t end,
+          std::size_t& pathId);
 
       /// Add random configuration into roadmap as new node. 
       bool addConfigToRoadmap (const ConfigurationPtr_t& config);
@@ -469,9 +452,11 @@ namespace hpp {
       void interrupt ();
 
       /// Add a path
-      void addPath (const PathVectorPtr_t& path)
+      std::size_t addPath (const PathVectorPtr_t& path)
       {
+        std::size_t s = paths_.size();
 	paths_.push_back (path);
+        return s;
       }
 
       /// Return vector of paths
@@ -579,6 +564,8 @@ namespace hpp {
       ConfigurationPtr_t initConf_;
       /// Shared pointer to goal configuration.
       Configurations_t goalConfigurations_;
+      /// Stored the goal constraints
+      ConstraintSetPtr_t goalConstraints_;
       /// Configuration shooter
       std::string configurationShooterType_;
       /// Steering method

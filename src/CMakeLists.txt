@@ -71,6 +71,8 @@ SET(${LIBRARY_NAME}_SOURCES
   path-projector/global.cc
   path-projector.cc
   parser/roadmap-factory.cc
+  problem-target/goal-configurations.cc
+  problem-target/task-target.cc
   )
 
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src)
@@ -82,5 +84,6 @@ ADD_LIBRARY(${LIBRARY_NAME}
 PKG_CONFIG_USE_DEPENDENCY(${LIBRARY_NAME} hpp-util)
 PKG_CONFIG_USE_DEPENDENCY(${LIBRARY_NAME} hpp-statistics)
 PKG_CONFIG_USE_DEPENDENCY(${LIBRARY_NAME} hpp-constraints)
+PKG_CONFIG_USE_DEPENDENCY(${LIBRARY_NAME} hpp-model)
 
 INSTALL(TARGETS ${LIBRARY_NAME} DESTINATION lib)

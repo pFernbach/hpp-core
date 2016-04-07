@@ -19,98 +19,177 @@
 
 # include <map>
 # include <list>
+
 # include <boost/smart_ptr/shared_ptr.hpp>
+
+# include <boost/mpl/inherit_linearly.hpp>
+# include <boost/mpl/fold.hpp>
+# include <boost/mpl/inherit.hpp>
+# include <boost/mpl/vector.hpp>
+# include <boost/mpl/for_each.hpp>
+# include <boost/type_traits/is_pointer.hpp>
+# include <boost/type_traits/remove_pointer.hpp>
 
 # include <hpp/core/config.hh>
 
 namespace hpp {
   namespace core {
-    template < typename Element, typename Key = std::string>
-    class HPP_CORE_DLLAPI Container
+    /// @cond INTERNAL
+    namespace internal {
+      template <typename T> struct is_pointer : boost::is_pointer<T> {};
+      template <typename T> struct is_pointer<boost::shared_ptr<T> > : boost::true_type {};
+      template <typename T> struct remove_pointer : boost::remove_pointer<T> {};
+      template <typename T> struct remove_pointer<boost::shared_ptr<T> > { typedef T type; };
+      template <typename T> struct remove_pointer<const boost::shared_ptr<T> > { typedef T type; };
+
+      template <bool deref_ptr> struct deref {
+        template <typename T> static inline T get (T t) { return t; }
+      };
+      template <> struct deref <true> {
+        template <typename T> static inline typename remove_pointer<T>::type get (T t) { return *t; }
+      };
+
+      template <typename Key, typename Type>
+        struct field
+        {
+          typedef std::map <Key, Type> Map_t;
+          Map_t map;
+
+          template <bool deref_ptr>
+            void print (std::ostream& os) const
+            {
+              for (typename Map_t::const_iterator
+                  it = map.begin (); it != map.end (); ++it)
+              {
+                os << it->first << " : " << deref<deref_ptr>::template get<const Type> (it->second) << std::endl;
+              }
+            }
+        };
+
+      template <typename Types, typename Key>
+        struct container_traits
+        {
+          typedef typename boost::mpl::inherit_linearly <
+            Types, boost::mpl::inherit < boost::mpl::arg<1>,
+                                         field< Key, boost::mpl::arg<2> >
+                                       >
+              >::type
+              type;
+        };
+
+      template <bool deref_ptr>
+        struct print {
+          std::ostream& os;
+
+          print (std::ostream& osio) : os (osio) {}
+
+          template <class Field>
+            void operator () (const Field& f)
+          {
+            f.Field::template print <deref_ptr> (os);
+          }
+        };
+    }
+    /// @endcond
+
+    template <typename Types, typename Key = std::string >
+      class Containers : private internal::container_traits <Types, Key>::type
     {
       public:
-        typedef std::map <Key, Element> ElementMap_t;
-        typedef typename ElementMap_t::iterator iterator;
-        typedef typename ElementMap_t::const_iterator const_iterator;
-        typedef Key Key_t;
-        typedef Element Element_t;
+        template <typename Element> struct traits {
+          typedef internal::field<Key, Element> Container;
+          typedef typename Container::Map_t Map_t;
+        };
+
+      private:
+        template <typename Element> struct _F {
+          typedef internal::field<Key, Element> T;
+          typedef typename T::Map_t Map_t;
+        };
+
+        /// Return the underlying map.
+        template <typename Element>
+        typename _F <Element>::Map_t& _map ()
+        {
+          return this->_F <Element>::T::map;
+        }
+
+      public:
+        /// Return the underlying map.
+        template <typename Element>
+        const typename traits<Element>::Map_t& map () const
+        {
+          return this->_F <Element>::T::map;
+        }
 
         /// Add an element
+        template <typename Element>
         void add (const Key& name, const Element& element)
         {
-          map_[name] = element;
+          _map <Element>()[name] = element;
         }
 
         /// Return the element named name
+        template <typename Element>
         bool has (const Key& name) const
         {
-          return (map_.find (name) != map_.end ());
+          return (map<Element>().find (name) != map<Element>().end ());
         }
 
         /// Return the element named name
+        template <typename Element>
         const Element& get (const Key& name) const
         {
-          typename ElementMap_t::const_iterator it = map_.find (name);
-          if (it == map_.end ()) throw std::runtime_error ("invalid key");
+          typename _F<Element>::Map_t::const_iterator it
+            = map<Element>().find (name);
+          if (it == map<Element>().end ())
+            throw std::runtime_error ("invalid key");
           return it->second;
         }
 
         /// Return a list of all elements
         /// \tparam ReturnType must have a push_back method.
-        template <typename ReturnType>
+        template <typename Element, typename ReturnType>
         ReturnType getAllAs () const
         {
           ReturnType l;
-          for (typename ElementMap_t::const_iterator it = map_.begin ();
-              it != map_.end (); ++it)
+          for (typename _F<Element>::Map_t::const_iterator
+              it = map<Element>().begin ();
+              it != map<Element>().end ();
+              ++it)
             l.push_back (it->second);
           return l;
         }
 
-        template <typename ReturnType>
+        template <typename Element, typename ReturnType>
         ReturnType getKeys () const
         {
           ReturnType l;
-          for (typename ElementMap_t::const_iterator it = map_.begin ();
-              it != map_.end (); ++it)
+          for (typename _F<Element>::Map_t::const_iterator
+              it = map<Element>().begin ();
+              it != map<Element>().end ();
+              ++it)
             l.push_back (it->first);
           return l;
         }
 
-        /// Return the underlying map.
-        const ElementMap_t& getAll () const
-        {
-          return map_;
-        }
-
         /// Print object in a stream
+        template <typename Type>
         std::ostream& print (std::ostream& os) const
         {
-          for (typename ElementMap_t::const_iterator it = map_.begin ();
-              it != map_.end (); ++it) {
-            os << it->first << " : " << it->second << std::endl;
-          }
+          internal::print< internal::is_pointer<Type>::value > printer (os);
+          printer (*((internal::field<Key, Type> const*)this));
+          // boost::mpl::for_each < Types > (print <false> (os));
           return os;
         }
 
         /// Print object in a stream
         std::ostream& printPointer (std::ostream& os) const
         {
-          for (typename ElementMap_t::const_iterator it = map_.begin ();
-              it != map_.end (); ++it) {
-            os << it->first << " : " << *(it->second) << std::endl;
-          }
+          boost::mpl::for_each < Types > (print <true> (os));
           return os;
         }
-
-      protected:
-        /// Constructor
-        Container () : map_ ()
-        {}
-
-      private:
-        ElementMap_t map_;
-    }; // class Container
+    };
   } // namespace core
 } // namespace hpp
 #endif // HPP_CORE_CONTAINER_HH
