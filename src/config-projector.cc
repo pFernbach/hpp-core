@@ -208,7 +208,7 @@ namespace hpp {
 	   itLocked != lockedJoints_.end (); ++itLocked) {
     std::size_t index = (*itLocked)->rankInVelocity ();
 	nbLockedDofs_ += (*itLocked)->numberDof ();
-	hppDout (info, "number locked dof " << (*itLocked)->numberDof ());
+	//hppDout (info, "number locked dof " << (*itLocked)->numberDof ());
 	size = (index - latestIndex);
 	if (size > 0) {
 	  interval.first = latestIndex;
@@ -684,15 +684,15 @@ namespace hpp {
 	}
       }
       lockedJoints_.push_back (lockedJoint);
-      hppDout (info, "add locked joint " << lockedJoint->jointName_
+      /*hppDout (info, "add locked joint " << lockedJoint->jointName_
 	       << " rank in velocity: " << lockedJoint->rankInVelocity ()
-	       << ", size: " << lockedJoint->numberDof ());
+	       << ", size: " << lockedJoint->numberDof ());*/
       computeIntervals ();
-      hppDout (info, "Intervals: ");
+      //hppDout (info, "Intervals: ");
       for (SizeIntervals_t::const_iterator it = intervals_.begin ();
 	   it != intervals_.end (); ++it) {
-	hppDout (info, "[" << it->first << "," << it->first + it->second - 1
-		 << "]");
+	/*hppDout (info, "[" << it->first << "," << it->first + it->second - 1
+	  << "]");*/
       }
       resize ();
       updateExplicitComputation ();

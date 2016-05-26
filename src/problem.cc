@@ -53,8 +53,8 @@ namespace hpp {
     {
       configValidations_->add (CollisionValidation::create (robot));
       configValidations_->add (JointBoundValidation::create (robot));
-      parabolaResults_.reserve (3);
-      parabolaResults_.resize (3);
+      parabolaResults_.reserve (4);
+      parabolaResults_.resize (4);
       memset(&parabolaResults_[0], 0,
 	     parabolaResults_.size() * sizeof parabolaResults_[0]);
     }

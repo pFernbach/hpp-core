@@ -38,7 +38,7 @@ namespace hpp {
     }
 
     Roadmap::Roadmap (const DistancePtr_t& distance, const DevicePtr_t&) :
-      edgeIndexVector_ (), nodeIndexVector_ (),
+      edgeIndex_ (0), nodeIndex_ (0), edgeIndexVector_ (), nodeIndexVector_ (),
       distance_ (distance), connectedComponents_ (), nodes_ (), edges_ (),
       initNode_ (), goalNodes_ (),
       nearestNeighbor_ (new nearestNeighbor::Basic (distance))
@@ -88,6 +88,8 @@ namespace hpp {
       goalNodes_.clear ();
       initNode_ = 0x0;
       nearestNeighbor_->clear();
+      edgeIndex_ = 0;
+      nodeIndex_ = 0;
     }
 
     NodePtr_t Roadmap::addNode (const ConfigurationPtr_t& configuration)

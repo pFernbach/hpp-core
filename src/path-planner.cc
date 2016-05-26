@@ -74,17 +74,22 @@ namespace hpp {
     PathVectorPtr_t PathPlanner::solve ()
     {
       /*value_type timmy = time (NULL);
-      srand (timmy);
-      hppDout (info, "time (NULL)= " << std::setprecision (15) << timmy);*/
+	srand (timmy);
+	hppDout (info, "time (NULL)= " << std::setprecision (15) << timmy);*/
       interrupt_ = false;
-      roadmap ()->edgeIndex_ = 0;
-      roadmap ()->nodeIndex_ = 0;
       bool solved = false;
       startSolve ();
-      tryDirectPath ();
+      hppDout (info, "check if already solved");
       solved = roadmap()->pathExists ();
       if (solved ) {
-	hppDout (info, "tryDirectPath succeeded");
+	hppDout (info, "configs already connected");
+      } else {
+	hppDout (info, "configs not already connected, try direct path");
+	tryDirectPath ();
+	solved = roadmap()->pathExists ();
+	if (solved ) {
+	  hppDout (info, "tryDirectPath succeeded");
+	}
       }
       if (interrupt_) throw std::runtime_error ("Interruption");
       while (!solved) {
@@ -93,7 +98,7 @@ namespace hpp {
        solved = roadmap()->pathExists ();
 	if (interrupt_) throw std::runtime_error ("Interruption");
       }
-      PathVectorPtr_t planned =  computePath ();
+      PathVectorPtr_t planned = computePath ();
       return finishSolve (planned);
     }
 
