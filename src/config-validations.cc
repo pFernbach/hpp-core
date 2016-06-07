@@ -16,7 +16,6 @@
 // hpp-core  If not, see
 // <http://www.gnu.org/licenses/>.
 
-
 #include <hpp/core/config-validations.hh>
 #include <hpp/core/validation-report.hh>
 
@@ -92,6 +91,12 @@ namespace hpp {
 
     ConfigValidations::ConfigValidations () : validations_ ()
     {
+    }
+
+    ConfigValidationPtr_t ConfigValidations::selectFirst () {
+      hppDout (info, "validations_.size= " << validations_.size ());
+      if (validations_.size () != 0)
+	return validations_.at (0);
     }
 
   } // namespace core

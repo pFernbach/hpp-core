@@ -61,6 +61,14 @@ namespace hpp {
       /// Add a configuration validation object
       void add (const ConfigValidationPtr_t& configValidation);
 
+      /// Clear configuration validation objects
+      void clear () {
+	validations_.clear ();
+      }
+
+      /// Select first (assuming only interested in this config-validator)
+      virtual ConfigValidationPtr_t selectFirst ();
+
       /// Add an obstacle
       /// \param object obstacle added
       /// Store obstacle and build a collision pair with each body of the robot.

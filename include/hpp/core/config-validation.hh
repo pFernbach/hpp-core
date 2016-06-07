@@ -86,6 +86,13 @@ namespace hpp {
 					   const CollisionObjectPtr_t&)
       {
       }
+
+      /// Set a validation-size parameter
+      /// Mainly used by the RbPrmValidation, to update the nbFilterMatch
+      virtual void setSizeParameter(const std::size_t size)
+      {
+      }
+
     protected:
       ConfigValidation ()
       {
