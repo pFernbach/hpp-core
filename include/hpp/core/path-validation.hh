@@ -21,7 +21,7 @@
 
 # include <hpp/core/config.hh>
 # include <hpp/core/fwd.hh>
-# include <hpp/core/deprecated.hh>
+# include <hpp/core/relative-motion.hh>
 
 namespace hpp {
   namespace core {
@@ -35,29 +35,6 @@ namespace hpp {
     class HPP_CORE_DLLAPI PathValidation
     {
     public:
-      /// Compute the largest valid interval starting from the path beginning
-      ///
-      /// \param path the path to check for validity,
-      /// \param reverse if true check from the end,
-      /// \retval the extracted valid part of the path, pointer to path if
-      ///         path is valid.
-      /// \return whether the whole path is valid.
-      virtual bool validate (const PathPtr_t& path, bool reverse,
-			     PathPtr_t& validPart) HPP_CORE_DEPRECATED = 0;
-
-      /// Compute the largest valid interval starting from the path beginning
-      ///
-      /// \param path the path to check for validity,
-      /// \param reverse if true check from the end,
-      /// \retval the extracted valid part of the path, pointer to path if
-      ///         path is valid.
-      /// \retval report information about the validation process. The type
-      ///         can be derived for specific implementation
-      /// \return whether the whole path is valid.
-      virtual bool validate (const PathPtr_t& path, bool reverse,
-			     PathPtr_t& validPart,
-			     ValidationReport& report) HPP_CORE_DEPRECATED = 0;
-
       /// Compute the largest valid interval starting from the path beginning
       ///
       /// \param path the path to check for validity,
@@ -89,6 +66,9 @@ namespace hpp {
 					    const CollisionObjectPtr_t&)
       {
       }
+
+      virtual void filterCollisionPairs (const RelativeMotion::matrix_type&) {}
+
     protected:
       PathValidation ()
       {

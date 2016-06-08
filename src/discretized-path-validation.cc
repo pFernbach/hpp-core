@@ -48,20 +48,6 @@ namespace hpp {
     }
 
     bool DiscretizedPathValidation::validate
-    (const PathPtr_t&, bool, PathPtr_t&)
-    {
-      throw std::runtime_error
-	("Deprecated DiscretizedPathValidation::validate: Not implemented");
-    }
-
-    bool DiscretizedPathValidation::validate
-    (const PathPtr_t&, bool, PathPtr_t&, ValidationReport&)
-    {
-      throw std::runtime_error
-	("Deprecated DiscretizedPathValidation::validate: Not implemented");
-    }
-
-    bool DiscretizedPathValidation::validate
     (const PathPtr_t& path, bool reverse, PathPtr_t& validPart,
      PathValidationReportPtr_t& validationReport)
     {
@@ -137,6 +123,12 @@ namespace hpp {
     (const JointPtr_t& joint, const CollisionObjectPtr_t& obstacle)
     {
       configValidations_->removeObstacleFromJoint (joint, obstacle);
+    }
+
+    void DiscretizedPathValidation::filterCollisionPairs (
+        const RelativeMotion::matrix_type& matrix)
+    {
+      configValidations_->filterCollisionPairs (matrix);
     }
 
     DiscretizedPathValidation::DiscretizedPathValidation

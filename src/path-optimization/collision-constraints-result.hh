@@ -21,9 +21,8 @@
 # define HPP_CORE_PATH_OPTIMIZATION_COLLISION_CONSTRAINTS_RESULT_HH
 
 # include <hpp/fcl/distance.h>
-# include <hpp/constraints/position.hh>
-# include <hpp/constraints/relative-position.hh>
 # include <hpp/model/fcl-to-eigen.hh>
+# include <hpp/constraints/generic-transformation.hh>
 
 namespace hpp {
   namespace core {
@@ -239,6 +238,12 @@ namespace hpp {
 	  Configuration_t q = (*localPath) (t_local, success);
 	  (*f_) (rhs.segment (rowInJacobian_, fSize_), q);
 	}
+
+        void add (const LockedJoints_t& lj) {
+            for (LockedJoints_t::const_iterator _lj = lj.begin ();
+                _lj != lj.end (); ++_lj)
+              configProjector_->add (*_lj);
+        }
 
       private:
 	void computeConstraint ()

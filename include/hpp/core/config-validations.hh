@@ -32,23 +32,7 @@ namespace hpp {
     {
     public:
       static ConfigValidationsPtr_t create ();
-      /// Compute whether the configuration is valid
-      ///
-      /// \param config the config to check for validity,
-      /// \param throwIfInValid if true throw an exception if config is invalid.
-      /// \return whether the whole config is valid.
-      virtual bool validate (const Configuration_t& config,
-			     bool throwIfInValid = false) HPP_CORE_DEPRECATED;
 
-      /// Compute whether the configuration is valid
-      ///
-      /// \param config the config to check for validity,
-      /// \param throwIfInValid if true throw an exception if config is invalid.
-      /// \retval validationReport report on validation
-      /// \return whether the whole config is valid.
-      virtual bool validate (const Configuration_t& config,
-			     ValidationReport& validationReport,
-			     bool throwIfInValid = false) HPP_CORE_DEPRECATED;
       /// Compute whether the configuration is valid
       ///
       /// \param config the config to check for validity,
@@ -82,6 +66,8 @@ namespace hpp {
       /// validation methods that do not care about obstacles.
       virtual void removeObstacleFromJoint
 	(const JointPtr_t& joint, const CollisionObjectPtr_t& obstacle);
+
+      void filterCollisionPairs (const RelativeMotion::matrix_type& matrix);
     protected:
       ConfigValidations ();
     private:

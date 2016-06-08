@@ -57,6 +57,7 @@ namespace hpp {
       parabolaResults_.resize (4);
       memset(&parabolaResults_[0], 0,
 	     parabolaResults_.size() * sizeof parabolaResults_[0]);
+      add<boost::any>("PathOptimizersNumberOfLoops", (std::size_t)5);
     }
 
     // ======================================================================
@@ -139,6 +140,21 @@ namespace hpp {
 	configValidations_->removeObstacleFromJoint (joint, obstacle);
       }
     }
+    // ======================================================================
+
+    void Problem::filterCollisionPairs ()
+    {
+      RelativeMotion::matrix_type matrix = RelativeMotion::matrix (robot_);
+      RelativeMotion::fromConstraint (matrix, robot_, constraints_);
+      hppDout (info, "RelativeMotion matrix:\n" << matrix);
+
+      if (pathValidation_) {
+	pathValidation_->filterCollisionPairs (matrix);
+      }
+      if (configValidations_) {
+	configValidations_->filterCollisionPairs (matrix);
+      }
+    }
 
     // ======================================================================
 
@@ -183,6 +199,22 @@ namespace hpp {
       }
 
       target_->check ();
+    }
+
+    // ======================================================================
+
+    void Problem::setParameter (const std::string& name, const boost::any& value)
+      throw (std::invalid_argument)
+    {
+      if (has<boost::any>(name)) {
+        const boost::any& val = get<boost::any>(name);
+        if (value.type() != val.type()) {
+          std::string ret = "Wrong boost::any type. Expects ";
+          ret += val.type().name();
+          throw std::invalid_argument (ret.c_str());
+        }
+      }
+      add<boost::any> (name, value);
     }
 
     // ======================================================================

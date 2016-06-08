@@ -20,11 +20,14 @@
 #ifndef HPP_CORE_PROBLEM_HH
 # define HPP_CORE_PROBLEM_HH
 
+# include <boost/any.hpp>
+
 # include <hpp/model/device.hh>
 # include <hpp/util/pointer.hh>
 
 # include <hpp/core/config.hh>
 # include <hpp/core/steering-method.hh>
+# include <hpp/core/container.hh>
 
 namespace hpp {
   namespace core {
@@ -41,7 +44,8 @@ namespace hpp {
     /// \li a method to validate paths,
     /// \li a set of methods to validate configurations. Default methods are
     /// collision checking and joint bound checking.
-    class HPP_CORE_DLLAPI Problem
+    class HPP_CORE_DLLAPI Problem :
+      public Containers < boost::mpl::vector < boost::any > >
     {
     public:
       /// Create a path planning problem.
@@ -140,7 +144,7 @@ namespace hpp {
       /// \name Path validation
       /// \{
       /// Set path validation method
-      void pathValidation (const PathValidationPtr_t& pathValidation);
+      virtual void pathValidation (const PathValidationPtr_t& pathValidation);
 
       /// Get path validation method
       PathValidationPtr_t pathValidation () const
@@ -212,6 +216,25 @@ namespace hpp {
       void removeObstacleFromJoint (const JointPtr_t& joint,
 				    const CollisionObjectPtr_t& obstacle);
 
+      /// Build matrix of relative motions between joints
+      ///
+      /// Loop over constraints in the current constraint set
+      /// (see Problem::constraints) and for each LockedJoint and each
+      /// constraints::RelativeTransformation, fill a matrix the column and
+      /// rows represent joints and the values are the following
+      /// \li RelativeMotionType::Constrained when the two joints are rigidly
+      ///     fixed by the constraint,
+      /// \li RelativeMotionType::Parameterized when the two joints are rigidly
+      ///     fixed by the constraint, the relative position is a parameter
+      ///     constant along path, but that can change for different paths,
+      /// \li RelativeMotionType::Unconstrained when the two joints are not
+      ///     rigidly fixed by the constraint.
+      ///
+      /// \note the matrix is passed to the current configuration validation
+      ///    instance (Problem::configValidation) and to the current
+      /// path validation instance (Problem::pathValidation).
+      void filterCollisionPairs ();
+
       /// Vector of objects considered for collision detection
       const ObjectVector_t& collisionObstacles () const;
       /// Set the vector of objects considered for collision detection
@@ -237,6 +260,40 @@ namespace hpp {
       /// Gather results from ParabolaPlanner or ParabolaSM
       /// Vector format: [Nb collision fails, Nb inters fails, Nb cnstr fails]
       mutable std::vector<long> parabolaResults_;
+
+      /// Get a parameter named name.
+      ///
+      /// \param name of the parameter.
+      /// \param defaultValue value returned if there is no parameter of this
+      ///        name
+      /// \throw boost::bad_any_cast if a parameter exists but has the wrong
+      ///        type.
+      template <typename T> T getParameter
+        (const std::string& name, const T& defaultValue) const
+        throw (boost::bad_any_cast)
+      {
+        if (has<boost::any>(name)) {
+          const boost::any& val = get<boost::any>(name);
+          return boost::any_cast<T>(val);
+        }
+        return defaultValue;
+      }
+
+      /// Set a parameter named name.
+      ///
+      /// \param name of the parameter.
+      /// \param value value of the parameter
+      /// \throw std::invalid_argument if a parameter exists but has a different
+      ///        type.
+      /// \note if you do not want any type checking but would rather erase any
+      ///       previous values, use
+      ///       \code
+      ///       add<boost::any>(name, (ExpectedType)value);
+      ///       \endcode
+      ///       If there is an ambiguity on the type, it is recommended to
+      ///       explicitely write it.
+      void setParameter (const std::string& name, const boost::any& value)
+        throw (std::invalid_argument);
 
     private :
       /// The robot

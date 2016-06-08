@@ -48,6 +48,8 @@ namespace hpp {
       ConfigurationShooterBuilder_t;
     typedef boost::function <SteeringMethodPtr_t (const ProblemPtr_t&) >
       SteeringMethodBuilder_t;
+    typedef std::vector<CollisionObjectPtr_t > AffordanceObjects_t;
+    typedef vector3_t AffordanceConfig_t;
 
     /// Set and solve a path planning problem
     ///
@@ -62,7 +64,9 @@ namespace hpp {
                              PathProjectorBuilder_t,
                              ConfigurationShooterBuilder_t,
                              NumericalConstraintPtr_t,
-                             SteeringMethodBuilder_t> >
+                             SteeringMethodBuilder_t,
+                             AffordanceObjects_t,
+                             AffordanceConfig_t > >
     {
     public:
 
@@ -113,8 +117,14 @@ namespace hpp {
       void resetGoalConstraint ();
       /// Set path planner type
       virtual void pathPlannerType (const std::string& type);
+      const std::string& pathPlannerType () const {
+        return pathPlannerType_;
+      }
       /// Set steering method type
       void steeringMethodType (const std::string& type);
+      const std::string& steeringMethodType () const {
+        return steeringMethodType_;
+      }
       /// Add a SteeringMethod type
       /// \param type name of the SteeringMethod type
       /// \param static method that creates a SteeringMethod
@@ -126,6 +136,9 @@ namespace hpp {
       }
       /// Set configuration shooter type
       void configurationShooterType (const std::string& type);
+      const std::string& configurationShooterType () const {
+        return configurationShooterType_;
+      }
       /// Add a ConfigurationShooter type
       /// \param type name of the ConfigurationShooter type
       /// \param static method that creates a ConfigurationShooter
@@ -156,6 +169,9 @@ namespace hpp {
       ///
       /// \param name of the type of path optimizer that should be added
       void addPathOptimizer (const std::string& type);
+      PathOptimizerTypes_t pathOptimizerTypes () const {
+        return pathOptimizerTypes_;
+      }
       /// Clear the vector of path optimizers
       void clearPathOptimizers ();
       /// Get path optimizer at given rank
@@ -186,8 +202,12 @@ namespace hpp {
       /// \param tolerance acceptable penetration for path validation
       /// Path validation methods are used to validate edges in path planning
       /// path optimization methods.
-      void pathValidationType (const std::string& type,
-			       const value_type& tolerance);
+      virtual void pathValidationType (const std::string& type,
+                                       const value_type& tolerance);
+      const std::string& pathValidationType (value_type& tolerance) {
+        tolerance = pathValidationTolerance_;
+        return pathValidationType_;
+      }
 
       /// Add a path validation type
       /// \param type name of the new path validation method,
@@ -205,6 +225,10 @@ namespace hpp {
       /// \param step discontinuity tolerance
       void pathProjectorType (const std::string& type,
 			      const value_type& step);
+      const std::string& pathProjectorType (value_type& tolerance) const {
+        tolerance = pathProjectorTolerance_;
+        return pathProjectorType_;
+      }
 
       /// Add a path projector type
       /// \param type name of the new path projector method,
@@ -436,17 +460,31 @@ namespace hpp {
 
       /// Make direct connection between two configurations
       /// \param start, end: the configurations to link.
-      /// \param pathId gets updated within the function as path added into path vector
+      /// \param validate whether path should be validated. If true, path
+      ///        validation is called and only valid part of path is inserted
+      ///        in the path vector.
+      /// \retval pathId Id of the path that is inserted in the path vector,
+      /// \retval report Reason for non validation if relevant.
       /// return false if direct path is not fully valid
+      ///
+      /// \note If path is only partly valid, valid part starting at start
+      ///       configuration is inserted in path vector.
       bool directPath (ConfigurationIn_t start, ConfigurationIn_t end,
-          std::size_t& pathId);
+		       bool validate, std::size_t& pathId, std::string& report);
 
-      /// Add random configuration into roadmap as new node. 
-      bool addConfigToRoadmap (const ConfigurationPtr_t& config);
+      /// Add random configuration into roadmap as new node.
+      void addConfigToRoadmap (const ConfigurationPtr_t& config);
 
       /// Add an edge between two roadmap nodes.
-      bool addEdgeToRoadmap (const ConfigurationPtr_t& config1, 
-                             const ConfigurationPtr_t& config2, const PathPtr_t& path);
+      ///
+      /// \param config1 configuration of start node,
+      /// \param config2 configuration of destination node,
+      /// \param path path to store in the edge.
+      ///
+      /// Check that nodes containing config1 and config2 exist in the roadmap.
+      void addEdgeToRoadmap (const ConfigurationPtr_t& config1,
+			     const ConfigurationPtr_t& config2,
+			     const PathPtr_t& path);
 
       /// Interrupt path planning and path optimization
       void interrupt ();
@@ -484,6 +522,11 @@ namespace hpp {
       void removeObstacleFromJoint (const std::string& jointName,
 				    const std::string& obstacleName);
 
+      /// Build matrix of relative motions between joints
+      ///
+      /// Call Problem::filterCollisionPairs.
+      void filterCollisionPairs ();
+
       /// Get obstacle by name
       const CollisionObjectPtr_t& obstacle (const std::string& name);
 
@@ -516,6 +559,16 @@ namespace hpp {
       /// From the solution path, update orientations info and re-build a path
       /// with accurate orientations
       PathVectorPtr_t createOrientations (PathVectorPtr_t path);
+
+      /// Initialize steering method
+      ///
+      /// Set steering method by calling the steering method factory
+      void initSteeringMethod ();
+
+      /// Initialize path projector
+      ///
+      /// Set path projector by calling path projector factory
+      void initPathProjector ();
 
     protected:
       /// Constructor

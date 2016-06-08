@@ -38,25 +38,6 @@ namespace hpp {
       /// Compute whether the configuration is valid
       ///
       /// \param config the config to check for validity,
-      /// \param throwIfInValid if true throw an exception if config is invalid.
-      /// \return whether the whole config is valid.
-      virtual bool validate (const Configuration_t& config,
-			     bool throwIfInValid = false) HPP_CORE_DEPRECATED;
-
-      /// Compute whether the configuration is valid
-      ///
-      /// \param config the config to check for validity,
-      /// \retval validationReport report on validation. This parameter will
-      ///         dynamically cast into CollisionValidationReport type,
-      /// \param throwIfInValid if true throw an exception if config is invalid,
-      /// \return whether the whole config is valid.
-      virtual bool validate (const Configuration_t& config,
-			     ValidationReport& validationReport,
-			     bool throwIfInValid = false) HPP_CORE_DEPRECATED;
-
-      /// Compute whether the configuration is valid
-      ///
-      /// \param config the config to check for validity,
       /// \retval validationReport report on validation. If non valid,
       ///         a validation report will be allocated and returned via this
       ///         shared pointer.
@@ -77,6 +58,18 @@ namespace hpp {
       /// validation methods that do not care about obstacles.
       virtual void removeObstacleFromJoint
 	(const JointPtr_t& joint, const CollisionObjectPtr_t& obstacle);
+
+      void filterCollisionPairs (const RelativeMotion::matrix_type& matrix);
+
+      void checkParameterized (bool active)
+      {
+        checkParameterized_ = active;
+      }
+
+      bool checkParameterized () const
+      {
+        return checkParameterized_;
+      }
     public:
       /// fcl low level request object used for collision checking.
       /// modify this attribute to obtain more detailed validation
@@ -86,12 +79,11 @@ namespace hpp {
       CollisionValidation (const DevicePtr_t& robot);
       DevicePtr_t robot_;
     private:
-      CollisionPairs_t collisionPairs_;
-      /// This member is used by the validate method that does not take a
-      /// validation report as input to call the validate method that expects
-      /// a validation report as input. This is not fully satisfactory, but
-      /// I did not find a better solution.
-      CollisionValidationReport unusedReport;
+      CollisionPairs_t collisionPairs_,
+                       parameterizedPairs_,
+                       disabledPairs_;
+
+      bool checkParameterized_;
     }; // class ConfigValidation
     /// \}
   } // namespace core

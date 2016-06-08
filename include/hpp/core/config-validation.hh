@@ -20,6 +20,7 @@
 # define HPP_CORE_CONFIG_VALIDATION_HH
 
 # include <hpp/core/validation-report.hh>
+# include <hpp/core/relative-motion.hh>
 # include <hpp/core/deprecated.hh>
 
 namespace hpp {
@@ -34,30 +35,6 @@ namespace hpp {
     class HPP_CORE_DLLAPI ConfigValidation
     {
     public:
-      /// Compute whether the configuration is valid
-      ///
-      /// \param config the config to check for validity,
-      /// \param throwIfInValid if true throw an exception if config is invalid.
-      /// \return whether the whole config is valid.
-      /// \deprecated Use the method that takes as input a reference to a shared
-      ///             pointer to a validation report instead
-      virtual bool validate (const Configuration_t& config,
-			     bool throwIfInValid) HPP_CORE_DEPRECATED = 0;
-
-      /// Compute whether the configuration is valid
-      ///
-      /// \param config the config to check for validity,
-      /// \retval validationReport report on validation. This object may be
-      ///         specialized by derived implementation to report specific
-      ///         information.
-      /// \param throwIfInValid if true throw an exception if config is invalid.
-      /// \return whether the whole config is valid.
-      /// \deprecated Use method that take as input a reference to a shared
-      ///             pointer to a validation report instead
-      virtual bool validate (const Configuration_t& config,
-			     ValidationReport& validationReport,
-			     bool throwIfInValid) HPP_CORE_DEPRECATED = 0;
-
       /// Compute whether the configuration is valid
       ///
       /// \param config the config to check for validity,
@@ -92,6 +69,17 @@ namespace hpp {
       virtual void setSizeParameter(const std::size_t size)
       {
       }
+
+      /// \brief Filter collision pairs.
+      /// Remove pairs of object that cannot be in collision
+      /// when these constraints are statisfied.
+      /// This effectively disables collision detection between objects that
+      /// have no possible relative motion due to the constraints.
+      /// \todo Before disabling collision pair, check if there is a collision.
+      ///
+      /// \param square symmetric matrix of RelativeMotionType of size numberDof x numberDof
+      virtual void filterCollisionPairs (const RelativeMotion::matrix_type&)
+      {}
 
     protected:
       ConfigValidation ()

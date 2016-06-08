@@ -20,6 +20,7 @@
 #include <hpp/model/collision-object.hh>
 #include <hpp/model/configuration.hh>
 #include <hpp/constraints/differentiable-function.hh>
+#include <hpp/core/bi-rrt-planner.hh>
 #include <hpp/core/problem-solver.hh>
 #include <hpp/core/diffusing-planner.hh>
 #include <hpp/core/distance-between-objects.hh>
@@ -37,8 +38,8 @@
 #include <hpp/core/problem-target/task-target.hh>
 #include <hpp/core/problem-target/goal-configurations.hh>
 #include <hpp/core/random-shortcut.hh>
-#include <hpp/core/roadmap.hh>
 #include <hpp/core/steering-method-straight.hh>
+#include <hpp/core/steering-method/reeds-shepp.hh>
 #include <hpp/core/visibility-prm-planner.hh>
 #include <hpp/core/weighed-distance.hh>
 #include <hpp/core/basic-configuration-shooter.hh>
@@ -78,7 +79,7 @@ namespace hpp {
     }
 
     ProblemSolver::ProblemSolver () :
-      constraints_ (), robot_ (), problem_ (), pathPlanner_ (),
+      constraints_ (), robot_ (), problem_ (NULL), pathPlanner_ (),
       roadmap_ (), paths_ (),
       pathProjectorType_ ("None"), pathProjectorTolerance_ (0.2),
       pathPlannerType_ ("DiffusingPlanner"),
@@ -94,6 +95,7 @@ namespace hpp {
     {
       add <PathPlannerBuilder_t> ("DiffusingPlanner",     DiffusingPlanner::createWithRoadmap);
       add <PathPlannerBuilder_t> ("VisibilityPrmPlanner", VisibilityPrmPlanner::createWithRoadmap);
+      add <PathPlannerBuilder_t> ("BiRRTPlanner", BiRRTPlanner::createWithRoadmap);
 
       add <ConfigurationShooterBuilder_t> ("BasicConfigurationShooter", BasicConfigurationShooter::create);
 
@@ -101,6 +103,7 @@ namespace hpp {
             static_cast<SteeringMethodStraightPtr_t (*)(const ProblemPtr_t&)>
               (&SteeringMethodStraight::create), _1
             ));
+      add <SteeringMethodBuilder_t> ("ReedsShepp", steeringMethod::ReedsShepp::createWithGuess);
 
       // Store path optimization methods in map.
       add <PathOptimizerBuilder_t> ("Prune",     Prune::create);
@@ -208,11 +211,7 @@ namespace hpp {
       pathProjectorTolerance_ = tolerance;
       // If a robot is present, set path projector method
       if (robot_ && problem_) {
-	PathProjectorPtr_t pathProjector =
-          get <PathProjectorBuilder_t> (pathProjectorType_)
-	  (problem_->distance (), problem_->steeringMethod (),
-	   pathProjectorTolerance_);
-	problem_->pathProjector (pathProjector);
+	initPathProjector ();
       }
     }
 
@@ -398,6 +397,7 @@ namespace hpp {
 
     void ProblemSolver::createPathOptimizers ()
     {
+      if (!problem_) throw std::runtime_error ("The problem is not defined.");
       if (pathOptimizers_.size () == 0) {
 	for (PathOptimizerTypes_t::const_iterator it =
 	       pathOptimizerTypes_.begin (); it != pathOptimizerTypes_.end ();
@@ -409,19 +409,20 @@ namespace hpp {
       }
     }
 
-    void ProblemSolver::initProblem ()
+    void ProblemSolver::initSteeringMethod ()
     {
+      if (!problem_) throw std::runtime_error ("The problem is not defined.");
       // Set shooter
       problem_->configurationShooter (get <ConfigurationShooterBuilder_t> (configurationShooterType_) (robot_));
 
       // Set steeringMethod
       SteeringMethodPtr_t sm (get <SteeringMethodBuilder_t> (steeringMethodType_) (problem_));
       problem_->steeringMethod (sm);
-      PathPlannerBuilder_t createPlanner =
-        get <PathPlannerBuilder_t> (pathPlannerType_);
-      pathPlanner_ = createPlanner (*problem_, roadmap_);
-      roadmap_ = pathPlanner_->roadmap();
-      /// create Path projector
+    }
+
+    void ProblemSolver::initPathProjector ()
+    {
+      if (!problem_) throw std::runtime_error ("The problem is not defined.");
       PathProjectorBuilder_t createProjector =
         get <PathProjectorBuilder_t> (pathProjectorType_);
       // Create a default steering method until we add a steering method
@@ -433,6 +434,23 @@ namespace hpp {
 			 SteeringMethodStraight::create (problem_),
 			 pathProjectorTolerance_);
       problem_->pathProjector (pathProjector_);
+    }
+
+    void ProblemSolver::initProblem ()
+    {
+      if (!problem_) throw std::runtime_error ("The problem is not defined.");
+
+      // Set shooter
+      problem_->configurationShooter
+        (get <ConfigurationShooterBuilder_t> (configurationShooterType_) (robot_));
+      // Set steeringMethod
+      initSteeringMethod ();
+      PathPlannerBuilder_t createPlanner =
+        get <PathPlannerBuilder_t> (pathPlannerType_);
+      pathPlanner_ = createPlanner (*problem_, roadmap_);
+      roadmap_ = pathPlanner_->roadmap();
+      /// create Path projector
+      initPathProjector ();
       /// create Path optimizer
       // Reset init and goal configurations
       problem_->initConfig (initConf_);
@@ -487,21 +505,37 @@ namespace hpp {
       //paths_.push_back (orient_path);
     }
 
-    bool ProblemSolver::directPath (ConfigurationIn_t start,
-				    ConfigurationIn_t end, std::size_t& pathId)
+    bool ProblemSolver::directPath
+    (ConfigurationIn_t start, ConfigurationIn_t end, bool validate,
+     std::size_t& pathId, std::string& report)
     {
+      if (!problem_) throw std::runtime_error ("The problem is not defined.");
+
       // Create steering method using factory
       SteeringMethodPtr_t sm (get <SteeringMethodBuilder_t> 
                              (steeringMethodType_) (problem_));
       problem_->steeringMethod (sm);
       PathPtr_t dp = (*sm) (start, end);
+      if (!dp) {
+	report = "Steering method failed to build a path.";
+	pathId = -1;
+	return false;
+      }
       PathPtr_t validSection;
-      bool PathValid = false;
-      PathValidationReportPtr_t report;
-      if (!problem()->pathValidation ()->validate
-	 (dp, PathValid, validSection, report)) {
+      PathValidationReportPtr_t r;
+      bool PathValid = true;
+      if (validate) {
+	PathValid = problem()->pathValidation ()->validate
+	  (dp, false, validSection, r);
+      }
+      if (!PathValid) {
 	hppDout(info, "Path only partly valid!");
+	hppDout (info, *r);
 	dp = validSection;
+	std::ostringstream oss;
+	oss << *r; report = oss.str ();
+      } else {
+	report = "";
       }
       // Add Path in problem
       PathVectorPtr_t path (core::PathVector::create (dp->outputSize (),
@@ -511,26 +545,27 @@ namespace hpp {
       return PathValid;
     }
 
-    bool ProblemSolver::addConfigToRoadmap (const ConfigurationPtr_t& config) 
+    void ProblemSolver::addConfigToRoadmap (const ConfigurationPtr_t& config) 
     {
       roadmap_->addNode(config);
-      return true;	
     }  
 
-    bool ProblemSolver::addEdgeToRoadmap (const ConfigurationPtr_t& config1, 
-                                           const ConfigurationPtr_t& config2,
-					   const PathPtr_t& path) 
+    void ProblemSolver::addEdgeToRoadmap (const ConfigurationPtr_t& config1,
+					  const ConfigurationPtr_t& config2,
+					  const PathPtr_t& path)
     {
       NodePtr_t node1, node2;
       value_type accuracy = 10e-6;
       value_type distance1, distance2;
       node1 = roadmap_->nearestNode(config1, distance1);
       node2 = roadmap_->nearestNode(config2, distance2);
-      if (distance1 < accuracy && distance2 < accuracy) {
-        roadmap_->addEdge(node1, node2, path);      
-        return true;
+      if (distance1 >= accuracy) {
+	throw std::runtime_error ("No node of the roadmap contains config1");
       }
-      return false;
+      if (distance2 >= accuracy) {
+	throw std::runtime_error ("No node of the roadmap contains config2");
+      }
+      roadmap_->addEdge(node1, node2, path);
     }
 
     void ProblemSolver::interrupt ()
@@ -545,6 +580,11 @@ namespace hpp {
     void ProblemSolver::addObstacle (const CollisionObjectPtr_t& object,
 				     bool collision, bool distance)
     {
+			if (obstacleMap_.find (object->name()) != obstacleMap_.end()) {
+					std::string errorMsg = "object with name " + object->name () +
+					" already added! Choose another name (prefix).";
+					throw std::runtime_error (errorMsg);
+			}
 
       if (collision){
 	collisionObstacles_.push_back (object);
@@ -570,6 +610,11 @@ namespace hpp {
       JointPtr_t joint = robot_->getJointByName (jointName);
       const CollisionObjectPtr_t& object = obstacle (obstacleName);
       problem ()->removeObstacleFromJoint (joint, object);
+    }
+
+    void ProblemSolver::filterCollisionPairs ()
+    {
+      problem()->filterCollisionPairs ();
     }
 
     const CollisionObjectPtr_t& ProblemSolver::obstacle
@@ -601,7 +646,6 @@ namespace hpp {
     {
       return collisionObstacles_;
     }
-
 
     const ObjectVector_t& ProblemSolver::distanceObstacles () const
     {

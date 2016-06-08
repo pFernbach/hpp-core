@@ -1,6 +1,6 @@
 #
 # Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016 CNRS
-# Authors: Florent Lamiraux
+# Authors: Florent Lamiraux, Joseph Mirabel
 #
 #
 # This file is part of hpp-core
@@ -21,7 +21,9 @@ SET(LIBRARY_NAME ${PROJECT_NAME})
 
 SET(${LIBRARY_NAME}_SOURCES
   astar.hh
+  bi-rrt-planner.cc
   collision-validation.cc
+  relative-motion.cc
   config-projector.cc
   comparison-type.cc
   config-validations.cc
@@ -53,6 +55,8 @@ SET(${LIBRARY_NAME}_SOURCES
   path-optimization/config-optimization.cc
   path-planner.cc
   path-vector.cc
+  reeds-shepp-path.cc
+  steering-method/reeds-shepp.cc
   plan-and-optimize.cc
   problem.cc
   problem-solver.cc

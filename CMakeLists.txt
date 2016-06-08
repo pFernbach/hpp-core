@@ -1,6 +1,6 @@
 #
 # Copyright (c) 2010, 2011 CNRS
-# Authors: Florent Lamiraux
+# Authors: Florent Lamiraux, Joseph Mirabel
 #
 #
 # This file is part of hpp-core
@@ -44,12 +44,15 @@ SET (HPP_BENCHMARK FALSE CACHE BOOL "trigger hpp-util benchmark output")
 IF (HPP_BENCHMARK)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHPP_ENABLE_BENCHMARK")
 ENDIF()
-
+# Ask Doxygen to create a tree view in html documentation
+SET(DOXYGEN_TREEVIEW "NO" CACHE STRING "Set to YES to generate a tree view in the html documentation")
 # Declare Headers
 SET(${PROJECT_NAME}_HEADERS
   include/hpp/core/basic-configuration-shooter.hh
+  include/hpp/core/bi-rrt-planner.hh
   include/hpp/core/collision-path-validation-report.hh
   include/hpp/core/collision-validation.hh
+  include/hpp/core/relative-motion.hh
   include/hpp/core/collision-validation-report.hh
   include/hpp/core/projection-error.hh
   include/hpp/core/configuration-shooter.hh
@@ -87,6 +90,7 @@ SET(${PROJECT_NAME}_HEADERS
   include/hpp/core/path-validation.hh
   include/hpp/core/path-validation-report.hh
   include/hpp/core/path-vector.hh
+  include/hpp/core/reeds-shepp-path.hh
   include/hpp/core/plan-and-optimize.hh
   include/hpp/core/problem.hh
   include/hpp/core/problem-solver.hh
@@ -95,6 +99,7 @@ SET(${PROJECT_NAME}_HEADERS
   include/hpp/core/roadmap.hh
   include/hpp/core/steering-method.hh
   include/hpp/core/steering-method-straight.hh
+  include/hpp/core/steering-method/reeds-shepp.hh
   include/hpp/core/straight-path.hh
   include/hpp/core/interpolated-path.hh
   include/hpp/core/validation-report.hh

@@ -28,33 +28,6 @@ namespace hpp {
     }
 
     bool ConfigValidations::validate (const Configuration_t& config,
-				      bool throwIfInValid)
-    {
-      for (std::vector <ConfigValidationPtr_t>::iterator
-	     it = validations_.begin (); it != validations_.end (); ++it) {
-	if ((*it)->validate (config, throwIfInValid)
-	    == false) {
-	  return false;
-	}
-      }
-      return true;
-    }
-
-    bool ConfigValidations::validate (const Configuration_t& config,
-				      ValidationReport& validationReport,
-				      bool throwIfInValid)
-    {
-      for (std::vector <ConfigValidationPtr_t>::iterator
-	     it = validations_.begin (); it != validations_.end (); ++it) {
-	if ((*it)->validate (config, validationReport, throwIfInValid)
-	    == false) {
-	  return false;
-	}
-      }
-      return true;
-    }
-
-    bool ConfigValidations::validate (const Configuration_t& config,
 				      ValidationReportPtr_t& validationReport)
     {
       for (std::vector <ConfigValidationPtr_t>::iterator
@@ -89,12 +62,19 @@ namespace hpp {
       }
     }
 
+    void ConfigValidations::filterCollisionPairs (const RelativeMotion::matrix_type& matrix)
+    {
+      for (std::vector <ConfigValidationPtr_t>::iterator itVal =
+	     validations_.begin (); itVal != validations_.end (); ++itVal) {
+	(*itVal)->filterCollisionPairs (matrix);
+      }
+    }
+
     ConfigValidations::ConfigValidations () : validations_ ()
     {
     }
 
     ConfigValidationPtr_t ConfigValidations::selectFirst () {
-      hppDout (info, "validations_.size= " << validations_.size ());
       if (validations_.size () != 0)
 	return validations_.at (0);
     }
