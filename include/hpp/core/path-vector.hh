@@ -138,7 +138,7 @@ namespace hpp {
 	     it != paths_.end (); it++) {
 	  length += (*it)->length ();
 	}
-	hppDout (info, "length: " << length);
+	//hppDout (info, "length: " << length);
 	//return timeRange ().second - timeRange ().first; // straight-path
 	return length;
       }

@@ -161,7 +161,7 @@ namespace hpp {
 
       /// Get coefficients if accurate for path (nothing by default)
       virtual vector_t coefficients () const {
-	vector_t empty (1);
+	vector_t empty (1); empty.setZero ();
 	return empty;
       }
 
