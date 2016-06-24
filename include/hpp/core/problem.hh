@@ -251,8 +251,11 @@ namespace hpp {
 	distanceBetweenObjects_ = dbo;
       }
 
-      /// Set maximal velocity limitation of Parabola Steering Method
-      mutable value_type vmax_;
+      /// Set maximal takeoff velocity limitation of Parabola Steering Method
+      mutable value_type vmaxTakeoff_;
+
+      /// Set maximal landing velocity limitation of Parabola Steering Method
+      mutable value_type vmaxLanding_;
       
       /// Set tangent friction coefficient of Parabola Steering Method
       mutable value_type mu_;

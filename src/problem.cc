@@ -40,7 +40,7 @@ namespace hpp {
     // ======================================================================
 
     Problem::Problem (DevicePtr_t robot) :
-      vmax_ (7), mu_ (1.2),
+      vmaxTakeoff_ (7), vmaxLanding_ (7), mu_ (1.2),
       robot_ (robot),
       distance_ (WeighedDistance::create (robot)),
       initConf_ (), target_ (),
