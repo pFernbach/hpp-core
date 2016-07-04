@@ -25,6 +25,9 @@
 
 namespace hpp {
   namespace core {
+    /// \addtogroup path
+    /// \{
+
     /// Concatenation of several paths
     class HPP_CORE_DLLAPI PathVector : public Path
     {
@@ -196,6 +199,7 @@ namespace hpp {
       Paths_t paths_;
       PathVectorWkPtr_t weak_;
     }; // class PathVector
+    /// \}
   } //   namespace core
 } // namespace hpp
 #endif // HPP_CORE_PATH_VECTOR_HH
