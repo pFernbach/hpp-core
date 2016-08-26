@@ -298,6 +298,16 @@ namespace hpp {
       void setParameter (const std::string& name, const boost::any& value)
         throw (std::invalid_argument);
 
+      /// Get the limit of the planner number of iterations
+      std::size_t plannerIterLimit () const {
+	return plannerIterLimit_;
+      }
+
+      /// Set the limit of the planner number of iterations
+      void plannerIterLimit (const std::size_t limit) const {
+	plannerIterLimit_ = limit;
+      }
+
     private :
       /// The robot
       DevicePtr_t robot_;
@@ -323,6 +333,8 @@ namespace hpp {
       DistanceBetweenObjectsPtr_t distanceBetweenObjects_;
       /// Configuration shooter
       ConfigurationShooterPtr_t configurationShooter_;
+      /// Limit of the planner number of iterations
+      mutable std::size_t plannerIterLimit_;
     }; // class Problem
     /// \}
   } // namespace core

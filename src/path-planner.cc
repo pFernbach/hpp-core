@@ -77,6 +77,9 @@ namespace hpp {
 	srand (timmy);
 	hppDout (info, "time (NULL)= " << std::setprecision (15) << timmy);*/
       interrupt_ = false;
+      std::size_t oneStepCount = 0;
+      const std::size_t plannerIterLimit = problem_.plannerIterLimit ();
+      hppDout (info, "plannerIterLimit= " << plannerIterLimit);
       bool solved = false;
       startSolve ();
       hppDout (info, "check if already solved");
@@ -92,13 +95,40 @@ namespace hpp {
 	}
       }
       if (interrupt_) throw std::runtime_error ("Interruption");
-      while (!solved) {
+      while (!solved && oneStepCount < plannerIterLimit) {
         problem_.target ()->oneStep ();
 	oneStep ();
+	oneStepCount++;
+	hppDout (info, "oneStepCount= " << oneStepCount);
        solved = roadmap()->pathExists ();
 	if (interrupt_) throw std::runtime_error ("Interruption");
       }
-      PathVectorPtr_t planned = computePath ();
+      PathVectorPtr_t planned = PathVector::create (problem_.robot ()->configSize (), problem_.robot ()->numberDof ());
+      if (oneStepCount < plannerIterLimit)
+	planned = computePath ();
+      else { // return directPath (even if invalid)
+	hppDout (info, "add (maybe invalid) directPath");
+	const SteeringMethodPtr_t& sm (problem ().steeringMethod ());
+	PathProjectorPtr_t pathProjector (problem ().pathProjector ());
+	PathPtr_t projPath, path;
+	NodePtr_t initNode = roadmap ()->initNode();
+	for (Nodes_t::const_iterator itn = roadmap ()->goalNodes ().begin();
+	     itn != roadmap ()->goalNodes ().end (); ++itn) {
+	  ConfigurationPtr_t q1 ((initNode)->configuration ());
+	  ConfigurationPtr_t q2 ((*itn)->configuration ());
+	  path = (*sm) (*q1, *q2);
+	  if (pathProjector) {
+	    if (!pathProjector->apply (path, projPath)) continue;
+	  } else {
+	    projPath = path;
+	  }
+	  if (projPath) {
+            roadmap ()->addEdge (initNode, *itn, projPath);
+	    roadmap ()->addEdge (*itn, initNode, projPath->reverse ());
+	    planned->appendPath (projPath);
+	  }
+	}
+      }
       return finishSolve (planned);
     }
 

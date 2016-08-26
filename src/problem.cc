@@ -49,7 +49,8 @@ namespace hpp {
       pathValidation_ (DiscretizedCollisionChecking::create
 		       (robot, 0.02)),
       collisionObstacles_ (), constraints_ (),
-      configurationShooter_(BasicConfigurationShooter::create (robot))
+      configurationShooter_(BasicConfigurationShooter::create (robot)),
+      plannerIterLimit_ (500000)
     {
       configValidations_->add (CollisionValidation::create (robot));
       configValidations_->add (JointBoundValidation::create (robot));
@@ -58,6 +59,7 @@ namespace hpp {
       memset(&parabolaResults_[0], 0,
 	     parabolaResults_.size() * sizeof parabolaResults_[0]);
       add<boost::any>("PathOptimizersNumberOfLoops", (std::size_t)5);
+      hppDout (info, "initial plannerIterLimit_= " << plannerIterLimit_);
     }
 
     // ======================================================================
