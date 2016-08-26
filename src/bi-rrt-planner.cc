@@ -128,13 +128,15 @@ namespace hpp {
         {
             PathValidationReportPtr_t report;
             pathValidFromStart = pathValidation->validate (path, false, validPath, report);
-            // Insert new path to q_near in roadmap
-            value_type t_final = validPath->timeRange ().second;
-            if (t_final != path->timeRange ().first)
-            {
-                startComponentConnected = true;
-                q_new = ConfigurationPtr_t (new Configuration_t(validPath->end ()));
-                reachedNodeFromStart = roadmap()->addNodeAndEdges(near, q_new, validPath);
+            if(validPath){
+              // Insert new path to q_near in roadmap
+              value_type t_final = validPath->timeRange ().second;
+              if (t_final != path->timeRange ().first)
+              {
+                  startComponentConnected = true;
+                  q_new = ConfigurationPtr_t (new Configuration_t(validPath->end ()));
+                  reachedNodeFromStart = roadmap()->addNodeAndEdge(near, q_new, validPath);
+              }
             }
         }
 
@@ -154,7 +156,7 @@ namespace hpp {
                     roadmap()->addEdge(reachedNodeFromStart, near, validPath);
                     return;
                 }
-                else
+                else if (validPath)
                 {
                     value_type t_final = validPath->timeRange ().second;
                     if (t_final != path->timeRange ().first)
