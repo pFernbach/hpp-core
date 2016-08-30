@@ -126,6 +126,10 @@ namespace hpp {
             roadmap ()->addEdge (initNode, *itn, projPath);
 	    roadmap ()->addEdge (*itn, initNode, projPath->reverse ());
 	    planned->appendPath (projPath);
+	  } else { // constraints not applied, but still return directPath
+	    roadmap ()->addEdge (initNode, *itn, path);
+	    roadmap ()->addEdge (*itn, initNode, path->reverse ());
+	    planned->appendPath (path);
 	  }
 	}
       }
