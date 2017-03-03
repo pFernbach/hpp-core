@@ -75,6 +75,10 @@ namespace hpp {
           hppDout(notice,"For joint :"<<problem_->robot()->getJointAtConfigRank(indexConfig)->name());
           if(problem_->robot()->getJointAtConfigRank(indexConfig)->name() != "base_joint_SO3"){
             T = computeMinTime(indexConfig,q1[indexConfig],q2[indexConfig],q1[indexVel],q2[indexVel],&infeasibleInterval);
+            if (T<0){
+              hppDout(notice,"Error for joint : "<<indexConfig<<" abort.");
+              return PathPtr_t();
+            }
             infIntervalsVector.push_back(infeasibleInterval);
             if(T > Tmax)
               Tmax = T;
@@ -153,9 +157,12 @@ namespace hpp {
         try {
           boost::any value = problem_->get<boost::any> (std::string("aMax"));
           aMaxFixed_ = boost::any_cast<double>(value);
+          aMax_ = Vector3::Ones(3)*aMaxFixed_;
+          aMax_[2] = 10;
         } catch (const std::exception& e) {
           std::cout<<"Warning : no acceleration bounds set, use 10.0 as default"<<std::endl;
           aMaxFixed_ = 10.;
+          aMax_ = Vector3::Ones(3)*aMaxFixed_;
         }
         try {
           boost::any value = problem_->get<boost::any> (std::string("vMax"));
@@ -189,6 +196,16 @@ namespace hpp {
         assert(index >= 0 && index < 3 && "index of joint should be between in [0;2]");
         double aMax =std::fabs(aMax_[index]);
         hppDout(notice,"amax used in computeMinTime("<<index<<") = "<<aMax);
+
+        if((p2-p1) == 0. && (v2-v1)==0. ){
+          hppDout(notice,"No movement in this joints, abort.");
+          return 0.;
+        }
+        if(aMax < 0.001)
+          return -1;
+
+
+
         double vMax = vMax_[index];
         double t1,t2,tv;
         int sigma;
@@ -204,10 +221,7 @@ namespace hpp {
         double a2 = -a1;
         double vLim = (sigma) * vMax;
         hppDout(info,"Vlim = "<<vLim<<"   ;  aMax = "<<aMax);
-        if((p2-p1) == 0. && (v2-v1)==0. ){  
-          hppDout(notice,"No movement in this joints, abort.");
-          return 0.;
-        }
+
         // test if two segment trajectory is valid :
         bool twoSegment = false;        
 
@@ -342,8 +356,8 @@ namespace hpp {
           return;
         }
 
-        if(tryJump_){
-          if(index == 2 && v1 == 0){ // FIXME : axis z ?
+        if(tryJump_ || 1){
+          if(index == 2 && /*((v1 == 0) ||*/ (v2==0)){ // FIXME : axis z ?
             hppDout(notice, "FIXED TIME TRAJ for axis Z : ");
             assert(index >= 0 && index < 3 && "index of joint should be between in [0;2]");
             double aMax =std::fabs(aMax_[index]);
@@ -404,7 +418,10 @@ namespace hpp {
               hppDout(notice,"Trajectory with 3 segments");
             }
             hppDout(notice,"a1 = "<<(*a1)<<"  ;  a2 ="<<a2);
-            *t0 = T - *t1 - *tv - *t2;
+            if(v1==0)
+              *t0 = T - *t1 - *tv - *t2;
+            else
+              *t0=0;
             hppDout(notice,"t0 = "<<*t0);
             hppDout(notice,"t = "<<(*t1)<<"   ;   "<<(*tv)<<"   ;   "<<(*t2));
             hppDout(notice,"T = "<<T);

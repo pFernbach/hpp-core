@@ -130,7 +130,7 @@ namespace hpp {
             result[indexVel] = vLim_[id];
             result[indexAcc] = 0.;
 
-          }else{
+          }else if (t <= (t0_[id] + t1_[id] + tv_[id] +t2_[id]) ){
           //  hppDout(info,"on  3° segment");
             t2 = t - tv_[id] - t1_[id] - t0_[id];
             if(tv_[id] > 0 )
@@ -141,6 +141,10 @@ namespace hpp {
             result[indexVel] = v2 - t2 * a1_[id];
             result[indexAcc] = -a1_[id];
 
+          }else{
+            result[id] = end_[id];
+            result[indexVel] = end_[indexVel];
+            result[indexAcc] = 0;
           }
         }// if not quaternion joint
 
