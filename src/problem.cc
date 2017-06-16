@@ -32,6 +32,7 @@
 #include <hpp/core/continuous-collision-checking/dichotomy.hh>
 #include <hpp/core/continuous-collision-checking/progressive.hh>
 #include <hpp/core/basic-configuration-shooter.hh>
+#include <hpp/core/torque-bound-validation.hh>
 
 namespace hpp {
   namespace core {
@@ -50,7 +51,9 @@ namespace hpp {
     {
       configValidations_->add (CollisionValidation::create (robot));
       configValidations_->add (JointBoundValidation::create (robot));
+      configValidations_->add (TorqueBoundValidation::create (robot));
       DiscretizedCollisionCheckingPtr_t pathVal = DiscretizedCollisionChecking::create(robot, 0.05);
+      pathVal->add(TorqueBoundValidation::create (robot));
       pathValidation(pathVal);
       add<double>("PathOptimizersNumberOfLoops", (std::size_t)5);
     }
