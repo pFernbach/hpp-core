@@ -174,16 +174,12 @@ value_type KinodynamicDistance::impl_distance (ConfigurationIn_t q1,
    // hppDout(info,"Distance between : "<<model::displayConfig(q1));
     //hppDout(info,"and              : "<<model::displayConfig(q2));
 
-    for(int indexConfig = 0 ; indexConfig < 3 ; indexConfig++){// FIX ME : only work with freeflyer
+    for(int indexConfig = 0 ; indexConfig < configSize ; indexConfig++){ // FIX ME : don't work with SO(3)
         size_type indexVel = indexConfig + configSize;
         //hppDout(notice,"For joint :"<<robot_->getJointAtConfigRank(indexConfig)->name());
-        if(robot_->getJointAtConfigRank(indexConfig)->name() != "base_joint_SO3"){
             T = computeMinTime(q1[indexConfig],q2[indexConfig],q1[indexVel],q2[indexVel]);
             if(T > Tmax)
                 Tmax = T;
-        }else{
-            //hppDout(notice,"!! Kinodynamic distance for quaternion not implemented yet.");
-        }
 
     }
    // hppDout(info," is : "<<Tmax);

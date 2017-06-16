@@ -96,49 +96,47 @@ namespace hpp {
         u = 0;
 
       //model::interpolate (device_, initial_, end_, u, result);
-      result[3] = 1.; // TODO : use interpolate, test only
+    /*  result[3] = 1.; // TODO : use interpolate, test only
       result[4] = 0.;
       result[5] = 0.;
-      result[6] = 0.;
+      result[6] = 0.;*/ // only for freeflyer
 
 
-      for(int id = 0 ; id < 3 ; id++){ // FIX ME : only work for freeflyer (translation part)
+      for(int id = 0 ; id < configSize ; id++){ // FIX ME : only work for freeflyer (translation part)
       //for (model::JointVector_t::const_iterator itJoint = jv.begin (); itJoint != jv.end (); itJoint++) {
         // size_type id = (*itJoint)->rankInConfiguration ();
         // size_type indexVel = (*itJoint)->rankInVelocity() + configSize;
         indexVel = id + configSize;
-        indexAcc = id + configSize + 3;
+        indexAcc = id + configSize*2;
         
        // hppDout(notice," PATH For joint "<<(*itJoint)->name());
        // hppDout(notice,"PATH for joint :"<<device()->getJointAtConfigRank(id)->name());
-        if(device()->getJointAtConfigRank(id)->name() != "base_joint_SO3"){          
-          
-          //if((*itJoint)->configSize() >= 1){
-          // 3 case (each segment of the trajectory) : 
-          if(t <= t1_[id]){
-          //  hppDout(info,"on  1° segment");
-            result[id] = 0.5*t*t*a1_[id] + t*initial_[indexVel] + initial_[id];
-            result[indexVel] = t*a1_[id] + initial_[indexVel];
-            result[indexAcc] = a1_[id];
-          }else if (t <= (t1_[id] + tv_[id]) ){
-          //  hppDout(info,"on  constant velocity segment");
-            result[id] = 0.5*t1_[id]*t1_[id]*a1_[id] + t1_[id]*initial_[indexVel] + initial_[id] + (t-t1_[id])*vLim_[id];
-            result[indexVel] = vLim_[id];
-            result[indexAcc] = 0.;
 
-          }else{
-          //  hppDout(info,"on  3° segment");
-            t2 = t - tv_[id] - t1_[id] ;
-            if(tv_[id] > 0 )
-              v2 = vLim_[id];
-            else
-              v2 = t1_[id]*a1_[id] + initial_[indexVel];
-            result[id] = 0.5*t1_[id]*t1_[id]*a1_[id] + t1_[id]*initial_[indexVel] + initial_[id] + tv_[id]*vLim_[id] - 0.5*t2*t2*a1_[id] + t2*v2;
-            result[indexVel] = v2 - t2 * a1_[id];
-            result[indexAcc] = -a1_[id];
+        //if((*itJoint)->configSize() >= 1){
+        // 3 case (each segment of the trajectory) :
+        if(t <= t1_[id]){
+        //  hppDout(info,"on  1° segment");
+          result[id] = 0.5*t*t*a1_[id] + t*initial_[indexVel] + initial_[id];
+          result[indexVel] = t*a1_[id] + initial_[indexVel];
+          result[indexAcc] = a1_[id];
+        }else if (t <= (t1_[id] + tv_[id]) ){
+        //  hppDout(info,"on  constant velocity segment");
+          result[id] = 0.5*t1_[id]*t1_[id]*a1_[id] + t1_[id]*initial_[indexVel] + initial_[id] + (t-t1_[id])*vLim_[id];
+          result[indexVel] = vLim_[id];
+          result[indexAcc] = 0.;
 
-          }
-        }// if not quaternion joint
+        }else{
+        //  hppDout(info,"on  3° segment");
+          t2 = t - tv_[id] - t1_[id] ;
+          if(tv_[id] > 0 )
+            v2 = vLim_[id];
+          else
+            v2 = t1_[id]*a1_[id] + initial_[indexVel];
+          result[id] = 0.5*t1_[id]*t1_[id]*a1_[id] + t1_[id]*initial_[indexVel] + initial_[id] + tv_[id]*vLim_[id] - 0.5*t2*t2*a1_[id] + t2*v2;
+          result[indexVel] = v2 - t2 * a1_[id];
+          result[indexAcc] = -a1_[id];
+
+        }
 
      // }// if joint config size > 1
       
@@ -160,12 +158,12 @@ namespace hpp {
       Configuration_t q2 ((*this) (subInterval.second, success));
       // set acceleration to 0 for initial and end config :
       size_type configSize = device()->configSize() - device()->extraConfigSpace().dimension ();
-      q1[configSize+3] = 0.0;
-      q1[configSize+4] = 0.0;
-      q1[configSize+5] = 0.0;
-      q2[configSize+3] = 0.0;
-      q2[configSize+4] = 0.0;
-      q2[configSize+5] = 0.0;
+      size_type idAcc = configSize + (device()->extraConfigSpace().dimension ())/2;
+      for (size_t i = 0 ; i < (device()->extraConfigSpace().dimension ())/2 ; ++i){
+        q1[idAcc + i] = 0.0;
+        q2[idAcc + i] = 0.0;
+      }
+
       hppDout(info,"from : ");
       hppDout(info,"q1 = "<<model::displayConfig(initial_));
       hppDout(info,"q2 = "<<model::displayConfig(end_));

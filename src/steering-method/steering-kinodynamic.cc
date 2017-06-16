@@ -67,17 +67,13 @@ namespace hpp {
         hppDout(info,"and     : "<<model::displayConfig(q2));
 
         // for all joints
-        for(int indexConfig = 0 ; indexConfig < 3 ; indexConfig++){ // FIX ME : only work for freeflyer
+        for(int indexConfig = 0 ; indexConfig < configSize ; indexConfig++){ // FIX ME : don't work with SO(3)
           size_type indexVel = indexConfig + configSize;
           hppDout(notice,"For joint :"<<problem_->robot()->getJointAtConfigRank(indexConfig)->name());
-          if(problem_->robot()->getJointAtConfigRank(indexConfig)->name() != "base_joint_SO3"){
-            T = computeMinTime(q1[indexConfig],q2[indexConfig],q1[indexVel],q2[indexVel],&infeasibleInterval);
-            infIntervalsVector.push_back(infeasibleInterval);
-            if(T > Tmax)
-              Tmax = T;
-          }else{
-            hppDout(notice,"!! Steering method for quaternion not implemented yet.");
-          }
+          T = computeMinTime(q1[indexConfig],q2[indexConfig],q1[indexVel],q2[indexVel],&infeasibleInterval);
+          infIntervalsVector.push_back(infeasibleInterval);
+          if(T > Tmax)
+            Tmax = T;
         }
 
 
@@ -107,23 +103,15 @@ namespace hpp {
         }// for all joints
         */
         hppDout(info,"compute fixed end-time trajectory for each joint : ");
-        for(int indexConfig = 0 ; indexConfig < 3 ; indexConfig++){
+        for(int indexConfig = 0 ; indexConfig < configSize ; indexConfig++){ // FIX ME : don't work with SO(3)
           size_type indexVel = indexConfig + configSize;
           hppDout(notice,"For joint :"<<problem_->robot()->getJointAtConfigRank(indexConfig)->name());
-          if(problem_->robot()->getJointAtConfigRank(indexConfig)->name() != "base_joint_SO3"){          
             fixedTimeTrajectory(length,q1[indexConfig],q2[indexConfig],q1[indexVel],q2[indexVel],&a1,&t1,&tv,&t2,&vLim);
             a1_t[indexConfig]=a1;
             t1_t[indexConfig]=t1;
             tv_t[indexConfig]=tv;
             t2_t[indexConfig]=t2;  
             vLim_t[indexConfig]=vLim;
-          }else{
-            hppDout(notice,"!! Steering method for quaternion not implemented yet.");
-           /* a1_t[indexConfig]=0;
-            t1_t[indexConfig]=0;
-            tv_t[indexConfig]=0;
-            t2_t[indexConfig]=0;  */
-          }
         }
         
         KinodynamicPathPtr_t path = KinodynamicPath::create (device_.lock (), q1, q2,length,a1_t,t1_t,tv_t,t2_t,vLim_t);
