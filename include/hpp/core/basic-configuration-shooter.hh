@@ -75,6 +75,7 @@ namespace hpp {
       /// Note that translation joints have to be bounded.
       BasicConfigurationShooter (const DevicePtr_t& robot) : robot_ (robot)
       {
+        srand ((unsigned int)(time(NULL)));
       }
       void init (const BasicConfigurationShooterPtr_t& self)
       {
