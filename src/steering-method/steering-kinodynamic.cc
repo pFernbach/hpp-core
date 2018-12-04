@@ -472,14 +472,14 @@ namespace hpp {
         if(fabs(a)>std::numeric_limits<double>::epsilon()*100.)
           x1 = q/a;
         else{
-          x1 = sigma*aMax_[index];
-          hppDout(notice,"a == 0, take x1 = aMax");
+          x1 = 0;
+          hppDout(notice,"a == 0, take x1 = 0");
         }
         if(fabs(q)>std::numeric_limits<double>::epsilon()*100.)
           x2 = c/q;
         else{
-          x2 = sigma*aMax_[index];
-          hppDout(notice,"q == 0, take x1 = aMax");
+          x2 = 0;
+          hppDout(notice,"q == 0, take x2 = 0");
         }
         hppDout(notice,"epsilon = "<<std::numeric_limits<double>::epsilon()*100.);
 
