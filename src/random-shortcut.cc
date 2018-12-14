@@ -125,19 +125,19 @@ namespace hpp {
 	result = PathVector::create (path->outputSize (),
 				     path->outputDerivativeSize ());
         try {
-          if (valid [0])
+          if (valid [0] && (straight[0]->length() < (t1-t0)))
             result->appendPath (proj [0]);
           else
             result->concatenate (tmpPath->extract
 				 (make_pair <value_type,value_type> (t0, t1))->
 				 as <PathVector> ());
-          if (valid [1])
+          if (valid [1]&& (straight[1]->length() < (t2-t1)))
             result->appendPath (proj [1]);
           else
             result->concatenate (tmpPath->extract
 				 (make_pair <value_type,value_type> (t1, t2))->
 				 as <PathVector> ());
-          if (valid [2])
+          if (valid [2]&& (straight[2]->length() < (t3-t2)))
             result->appendPath (proj [2]);
           else
             result->concatenate (tmpPath->extract
